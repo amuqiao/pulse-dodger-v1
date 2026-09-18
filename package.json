@@ -1,7 +1,7 @@
 {
-  "name": "pulse-dodger-v1",
+  "name": "phaser-crazygames-template",
   "version": "0.1.0",
-  "description": "Pulse Dodger v1",
+  "description": "A Phaser 3 + TypeScript + Vite starter wired for CrazyGames HTML5 SDK v3.",
   "license": "MIT",
   "private": true,
   "type": "module",
