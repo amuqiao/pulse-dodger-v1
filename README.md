@@ -55,58 +55,6 @@ npm run portal:upload
 | `npm run archive:offline` | Build and create an offline zip archive under `submissions/archives/`. |
 | `npm run package` | Alias for `npm run archive:offline`; do not upload this zip to the Portal unless the Portal explicitly asks for an archive. |
 
-## Use This Template For A New Game
-
-Keep this repository as the reusable template. Create every real game in its own repository:
-
-```text
-phaser-crazygames-template
-= reusable engineering template
-
-pulse-dodger-v1
-= one real game copied from the template
-```
-
-For an empty GitHub repository such as `git@github.com:amuqiao/pulse-dodger-v1.git`, run:
-
-```bash
-cd /Users/admin/Code/Game
-
-git clone git@github.com:amuqiao/pulse-dodger-v1.git
-
-rsync -av \
-  --exclude='.git' \
-  --exclude='node_modules' \
-  --exclude='dist' \
-  --exclude='submissions' \
-  phaser-crazygames-template/ \
-  pulse-dodger-v1/
-
-cd pulse-dodger-v1
-
-npm pkg set name="pulse-dodger-v1" description="Pulse Dodger v1"
-npm install --package-lock-only
-npm ci
-npm run build
-npm run portal:upload
-```
-
-Then make the first game-specific changes in the copied game repository:
-
-```text
-package.json              package name and description
-src/game/theme.ts         game title, English copy, colors
-src/game/keys.ts          storage keys, unique per game
-src/game/core/RunState.ts pure gameplay rules
-src/game/scenes/PlayScene.ts actual Phaser gameplay
-materials/metadata.md     CrazyGames submission metadata
-materials/screenshots/    final screenshots
-materials/covers/         final covers
-materials/videos/         preview videos
-```
-
-Upload the files inside `submissions/portal-upload/` to CrazyGames. Do not upload `submissions/archives/*.zip` unless the Portal explicitly asks for an archive.
-
 ## Directory Map
 
 ```text
