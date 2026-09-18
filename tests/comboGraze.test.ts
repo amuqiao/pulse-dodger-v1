@@ -82,6 +82,14 @@ test('graze 加分、加充能,并计入次数', () => {
   assert.equal(result.grazes, 2, 'graze 次数必须被记录并透传到 finish() 的返回值里');
 });
 
+test('graze 不会凭空启动连击条', () => {
+  const state = new GameState(new InMemoryScoreRepository());
+  state.grazeHazard();
+
+  assert.equal(state.combo, 1);
+  assert.equal(state.comboRemainingRatio, 0, '没吃过能量点时,擦边不应该创建 combo 倒计时');
+});
+
 test('graze 可以延续连击窗口,但不直接抬高倍率', () => {
   const state = new GameState(new InMemoryScoreRepository());
   state.collectMote();

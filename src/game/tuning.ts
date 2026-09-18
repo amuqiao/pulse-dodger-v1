@@ -245,6 +245,10 @@ export const GRAZE = {
   arcHalfSpanDeg: 30,
   /** 短弧淡出时长 */
   arcFadeMs: 120,
+  /** 擦边补能飞向玩家的能量火花时长 */
+  chargeFleckMs: 180,
+  /** 擦边补能火花使用 mote 贴图的缩放 */
+  chargeFleckScale: 0.34,
 } as const;
 
 /**

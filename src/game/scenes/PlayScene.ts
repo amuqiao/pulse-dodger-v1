@@ -254,6 +254,7 @@ export class PlayScene extends Phaser.Scene {
 
       audio.graze(this.grazeChain);
       this.grazeArc(h, x, y);
+      this.grazeChargeFleck(h.x, h.y, x, y);
     }
   }
 
@@ -272,6 +273,26 @@ export class PlayScene extends Phaser.Scene {
       alpha: 0,
       duration: GRAZE.arcFadeMs,
       onComplete: () => arc.destroy(),
+    });
+  }
+
+  /** 擦边补能反馈:小蓝光从碎片边缘被吸回玩家,不加文字、不占 HUD。 */
+  private grazeChargeFleck(fromX: number, fromY: number, toX: number, toY: number): void {
+    const fleck = this.add
+      .image(fromX, fromY, 'tex-mote')
+      .setScale(GRAZE.chargeFleckScale)
+      .setAlpha(0.85)
+      .setDepth(95);
+
+    this.tweens.add({
+      targets: fleck,
+      x: toX,
+      y: toY,
+      scale: 0.08,
+      alpha: 0,
+      duration: GRAZE.chargeFleckMs,
+      ease: 'Cubic.In',
+      onComplete: () => fleck.destroy(),
     });
   }
 
