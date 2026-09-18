@@ -141,12 +141,6 @@ start_dev() {
   local stable_checks=0
   pid="$(read_pid)"
   for _ in {1..30}; do
-    if ! is_running "$pid"; then
-      event "FAIL" "dev" "process exited during startup"
-      rm -f "$PID_FILE"
-      tail -n 40 "$LOG_FILE" >&2
-      exit 1
-    fi
     load_port_pid
     if [[ "$PORT_PID_RESULT" == "$pid" ]]; then
       stable_checks=$((stable_checks + 1))
@@ -157,6 +151,12 @@ start_dev() {
       fi
     else
       stable_checks=0
+    fi
+    if ! is_running "$pid"; then
+      event "FAIL" "dev" "process exited during startup"
+      rm -f "$PID_FILE"
+      tail -n 40 "$LOG_FILE" >&2
+      exit 1
     fi
     sleep 0.2
   done
@@ -179,7 +179,20 @@ status_dev() {
 
   local pid=""
   if ! pid="$(read_pid)"; then
+    load_port_pid
+    if [[ -n "$PORT_PID_RESULT" ]]; then
+      assert_managed_pid "$PORT_PID_RESULT"
+      event "ORPHAN" "dev" "running without pid file: $URL (pid $PORT_PID_RESULT)"
+      return 0
+    fi
     event "STOPPED" "dev" "no pid file"
+    return 0
+  fi
+
+  load_port_pid
+  if [[ "$PORT_PID_RESULT" == "$pid" ]]; then
+    assert_managed_pid "$pid"
+    event "OK" "dev" "running: $URL (pid $pid)"
     return 0
   fi
 
@@ -197,6 +210,15 @@ stop_dev() {
 
   local pid=""
   if ! pid="$(read_pid)"; then
+    load_port_pid
+    if [[ -n "$PORT_PID_RESULT" ]]; then
+      assert_managed_pid "$PORT_PID_RESULT"
+      event "RUN" "dev" "stopping orphan pid $PORT_PID_RESULT"
+      kill "$PORT_PID_RESULT"
+      wait_for_stop "$PORT_PID_RESULT"
+      event "OK" "dev" "stopped"
+      return 0
+    fi
     event "STOPPED" "dev" "already stopped"
     return 0
   fi
@@ -210,11 +232,15 @@ stop_dev() {
   assert_managed_pid "$pid"
   event "RUN" "dev" "stopping pid $pid"
   kill "$pid"
+  wait_for_stop "$pid"
+  rm -f "$PID_FILE"
+  event "OK" "dev" "stopped"
+}
 
+wait_for_stop() {
+  local pid="$1"
   for _ in {1..50}; do
     if ! is_running "$pid"; then
-      rm -f "$PID_FILE"
-      event "OK" "dev" "stopped"
       return 0
     fi
     sleep 0.1
