@@ -1,28 +1,108 @@
 import { strict as assert } from 'node:assert';
 import test from 'node:test';
 import { GameState } from '../src/game/core/GameState.ts';
-import { COMBO } from '../src/game/tuning.ts';
+import { COMBO, PULSE } from '../src/game/tuning.ts';
 import { InMemoryScoreRepository } from './fakes/InMemoryScoreRepository.ts';
 
 // GameState 现在通过构造函数注入 ScoreRepository,不再直接碰 platform(),
 // 所以可以像 difficulty.ts 一样在 node 里直接 new 出来断言,不需要起 Phaser
 // 或浏览器环境。这类"规则层"测试专门盯 domain 不变量有没有被绕过。
 
-test('充能封顶不溢出:吃再多能量点也不会超过 maxCharge', () => {
+function armPulseWithoutCombo(state: GameState, motes: number = PULSE.minCharge): void {
+  for (let i = 0; i < motes; i++) {
+    state.collectMote();
+    state.tick(COMBO.windowMs + 1);
+  }
+}
+
+test('pulse 范围累计封顶不溢出:吃再多能量点也不会超过 maxCharge', () => {
   const state = new GameState(new InMemoryScoreRepository());
   for (let i = 0; i < 20; i++) {
     state.collectMote();
   }
-  assert.equal(state.charge, 100);
+  assert.equal(state.charge, PULSE.maxCharge);
 });
 
-test('spendPulse 清零充能,并按清掉的数量计分', () => {
+test('pulse 低于 minCharge 时释放会抛错,且不改变分数、充能和统计', () => {
   const state = new GameState(new InMemoryScoreRepository());
   state.collectMote();
+  state.collectMote();
+
+  const scoreBefore = state.score;
+  const chargeBefore = state.charge;
+  assert.equal(state.pulseReady, false);
+  assert.throws(() => state.spendPulse(1), /pulse 尚未就绪/);
+  assert.equal(state.score, scoreBefore, '非法释放不应该加分');
+  assert.equal(state.charge, chargeBefore, '非法释放不应该消耗范围累计');
+  assert.equal(state.finish().pulsesFired, 0, '非法释放不应该计入释放次数');
+});
+
+test('spendPulse 只接受非负整数清场数量', () => {
+  const state = new GameState(new InMemoryScoreRepository());
+  armPulseWithoutCombo(state);
+
+  assert.throws(() => state.previewPulseScore(-1), /非负整数/);
+  assert.throws(() => state.previewPulseScore(1.5), /非负整数/);
+  assert.throws(() => state.spendPulse(-1), /非负整数/);
+  assert.equal(state.charge, PULSE.minCharge, '非法清场数量不应该消耗范围累计');
+});
+
+test('pulse 累计到 minCharge 后才进入 ready', () => {
+  const state = new GameState(new InMemoryScoreRepository());
+  state.collectMote();
+  state.collectMote();
+  assert.equal(state.pulseReady, false);
+  state.collectMote();
+  assert.equal(state.pulseReady, true);
+});
+
+test('graze 可以把 2.75 豆推到 3 豆释放门槛', () => {
+  const state = new GameState(new InMemoryScoreRepository());
+  state.collectMote();
+  state.collectMote();
+  state.grazeHazard();
+  state.grazeHazard();
+  state.grazeHazard();
+
+  assert.equal(state.charge, 2.75);
+  assert.equal(state.pulseReady, false);
+
+  state.grazeHazard();
+  assert.equal(state.charge, PULSE.minCharge);
+  assert.equal(state.pulseReady, true);
+});
+
+test('pulse 半径从 3 点起步,继续攒到 10 点达到最大范围和倍率', () => {
+  const state = new GameState(new InMemoryScoreRepository());
+
+  armPulseWithoutCombo(state, PULSE.minCharge);
+  assert.equal(state.pulseArmRatio, 1);
+  assert.equal(state.pulseRadius, PULSE.radiusMin);
+  assert.equal(state.pulseRangeMultiplier, PULSE.rangeMultiplierMin);
+
+  armPulseWithoutCombo(state, PULSE.maxCharge - PULSE.minCharge);
+  assert.equal(state.charge, PULSE.maxCharge);
+  assert.equal(state.pulseRadius, PULSE.radiusMax);
+  assert.equal(state.pulseRangeMultiplier, PULSE.rangeMultiplierMax);
+});
+
+test('spendPulse 清零累计范围,并按清掉数量、combo、范围倍率计分', () => {
+  const state = new GameState(new InMemoryScoreRepository());
+  for (let i = 0; i < 5; i++) {
+    state.collectMote();
+  }
+  const expectedComboMultiplier = 1 + (state.combo - 1) * PULSE.comboMultiplierStep;
+  assert.equal(state.pulseComboMultiplier, expectedComboMultiplier);
+
+  const expectedPulseScore = Math.round(
+    3 * PULSE.scorePerHazardCleared * state.pulseScoreMultiplier,
+  );
+
+  assert.equal(state.previewPulseScore(3), expectedPulseScore);
   const gained = state.spendPulse(3);
-  assert.equal(gained, 75); // 3 * scorePerHazardCleared(25)
+  assert.equal(gained, expectedPulseScore);
   assert.equal(state.charge, 0);
-  assert.equal(state.score, 10 + 75); // 一颗能量点的 10 分 + 冲击波 75 分
+  assert.equal(state.previewPulseScore(3), 0, '释放后累计范围已清零,不能继续预览同一次 pulse 得分');
 });
 
 test('破纪录时才把新分数写回存档', () => {

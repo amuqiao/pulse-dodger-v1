@@ -1,12 +1,19 @@
 import { strict as assert } from 'node:assert';
 import test from 'node:test';
 import { GameState } from '../src/game/core/GameState.ts';
-import { COMBO, GRAZE, MOTE } from '../src/game/tuning.ts';
+import { COMBO, GRAZE, MOTE, PULSE } from '../src/game/tuning.ts';
 import { InMemoryScoreRepository } from './fakes/InMemoryScoreRepository.ts';
 
 // 连击(combo)和擦身而过(graze)是把游戏从"离所有碎片越远越好"这个无聊
 // 最优解,掰回"主动贴近走位"的核心改动。这里只测规则层(GameState),
 // 不测几何检测(那部分在 systems 层,用 Phaser.Math.Distance)。
+
+function armPulseWithoutCombo(state: GameState): void {
+  for (let i = 0; i < PULSE.minCharge; i++) {
+    state.collectMote();
+    state.tick(COMBO.windowMs + 1);
+  }
+}
 
 test('窗口内连续吃点,倍率逐次 +1,到 maxMultiplier 封顶', () => {
   const state = new GameState(new InMemoryScoreRepository());
@@ -75,6 +82,21 @@ test('graze 加分、加充能,并计入次数', () => {
   assert.equal(result.grazes, 2, 'graze 次数必须被记录并透传到 finish() 的返回值里');
 });
 
+test('graze 可以延续连击窗口,但不直接抬高倍率', () => {
+  const state = new GameState(new InMemoryScoreRepository());
+  state.collectMote();
+  state.collectMote();
+  assert.equal(state.combo, 2);
+
+  state.tick(COMBO.windowMs - 100);
+  state.grazeHazard();
+  state.tick(200);
+
+  assert.equal(state.combo, 2, '擦身成功应该续住风险收益窗口');
+  state.tick(COMBO.windowMs + 1);
+  assert.equal(state.combo, 1, 'graze 续住的窗口也必须自然过期');
+});
+
 test('maxCombo 记录的是本局峰值,不是断连后的当前值', () => {
   const state = new GameState(new InMemoryScoreRepository());
   // 连续 4 次都在窗口内(不 tick),倍率应该冲到 4
@@ -95,11 +117,12 @@ test('死亡后 finish() 返回值里能读到本局全部统计字段', () => {
   state.collectMote();
   state.collectMote();
   state.grazeHazard();
+  state.collectMote();
   state.spendPulse(3);
   state.resetCombo(); // 模拟死亡打断连击
 
   const result = state.finish();
-  assert.equal(result.motesCollected, 2);
+  assert.equal(result.motesCollected, 3);
   assert.equal(result.grazes, 1);
   assert.equal(result.pulsesFired, 1);
   assert.equal(result.hazardsCleared, 3);
@@ -108,7 +131,9 @@ test('死亡后 finish() 返回值里能读到本局全部统计字段', () => {
 
 test('pulsesFired 每次调用 spendPulse 都自增,即使一个碎片都没清到', () => {
   const state = new GameState(new InMemoryScoreRepository());
+  armPulseWithoutCombo(state);
   state.spendPulse(0);
+  armPulseWithoutCombo(state);
   state.spendPulse(0);
   const result = state.finish();
   assert.equal(result.pulsesFired, 2, '哪怕清场数量是 0,只要按下了冲击波就该计一次');
@@ -117,7 +142,9 @@ test('pulsesFired 每次调用 spendPulse 都自增,即使一个碎片都没清�
 
 test('hazardsCleared 跨多次 spendPulse 累加,不是只记最后一次', () => {
   const state = new GameState(new InMemoryScoreRepository());
+  armPulseWithoutCombo(state);
   state.spendPulse(2);
+  armPulseWithoutCombo(state);
   state.spendPulse(5);
   const result = state.finish();
   assert.equal(result.hazardsCleared, 7, '必须是历次清场数量的总和');

@@ -167,8 +167,6 @@ export const THEME = {
     breathAmount: 0.06,
     /** playReadyBurst 扩张动画时长 */
     readyExpandMs: 280,
-    /** 扩张动画结束后收回到的比例(相对 PULSE.radius) */
-    restRatio: 0.94,
     /** 充能弧阻尼跟随系数,每 16.667ms 向目标靠拢的比例 */
     damping: 0.22,
   },
@@ -227,7 +225,7 @@ export const THEME = {
     reviveButton: 'REVIVE',
     reviveCountdown: (n: number) => `Results in ${n}s`,
     survivedFor: (s: number, best: number) => `Survived ${s}s  ·  Best ${best}`,
-    resultTip: 'Tip: pulse when charged and clear 4+ shards for the biggest score burst',
+    resultTip: 'Tip: a wider ring pays better, but waiting longer is the risk',
     loading: 'Loading',
     soundOn: 'Sound: On',
     soundOff: 'Sound: Off',
@@ -273,8 +271,8 @@ export const THEME = {
     tutMove: 'Move to dodge',
     tutMoveTouch: 'Drag to move',
     tutCollect: 'Collect blue motes',
-    tutCharge: 'Blue motes charge pulse',
-    tutPulseMouse: 'Click to pulse',
+    tutCharge: 'Collect 3 motes to arm pulse',
+    tutPulseMouse: 'Click to cash out',
     tutPulseKey: 'Press Space',
     tutPulseTouch: 'Tap to pulse',
   },

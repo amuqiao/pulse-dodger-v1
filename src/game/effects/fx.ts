@@ -52,7 +52,7 @@ export class Fx {
   }
 
   /**
-   * 冲击波光环。radius 由调用方传入(比如 `PULSE.radius`),这里不假设
+   * 冲击波光环。radius 由调用方传入,这里不假设
    * 具体数值 —— 换一款玩法冲击波半径变了,这个函数不需要跟着改。
    */
   shockwave(x: number, y: number, radius: number): void {

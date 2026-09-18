@@ -191,12 +191,13 @@ export class PlayScene extends Phaser.Scene {
 
     this.updateGraze(x, y, now);
 
-    const inRangeCount = this.hazards.collectWithin(x, y, PULSE.radius).length;
-    this.playerRing.update(x, y, this.state.chargeRatio, this.state.pulseReady, inRangeCount, delta, now);
+    const pulseRadius = this.state.pulseRadius;
+    const inRangeCount = this.state.pulseReady ? this.hazards.collectWithin(x, y, pulseRadius).length : 0;
+    this.playerRing.update(x, y, this.state.pulseArmRatio, this.state.pulseReady, pulseRadius, inRangeCount, delta, now);
 
     const pulseReady = this.state.pulseReady;
     if (pulseReady && !this.wasPulseReady) {
-      this.playerRing.playReadyBurst(x, y);
+      this.playerRing.playReadyBurst(x, y, pulseRadius);
       audio.chargeFull();
     }
     this.wasPulseReady = pulseReady;
@@ -284,16 +285,19 @@ export class PlayScene extends Phaser.Scene {
     }
 
     const { x, y } = this.player.position;
-    const hit = this.hazards.collectWithin(x, y, PULSE.radius); // 查询
+    const radius = this.state.pulseRadius;
+    const pulsePowerRatio = this.state.pulsePowerRatio;
+    const hit = this.hazards.collectWithin(x, y, radius); // 查询
     const gained = this.state.spendPulse(hit.length); // 改状态
     this.tutorialPulsesFired += 1;
 
     audio.pulse();
-    this.fx.shockwave(x, y, PULSE.radius); // 表现:主环
-    this.secondaryRing(x, y); // 表现:延迟的第二圈环,线宽/alpha 减半
+    this.fx.shockwave(x, y, radius); // 表现:主环
+    this.secondaryRing(x, y, radius); // 表现:延迟的第二圈环,线宽/alpha 减半
+    this.fx.burst(x, y, THEME.entity.pulse, 2 + Math.round(pulsePowerRatio * 4));
 
     if (gained > 0) {
-      this.fx.floatText(x, y - u(40), `+${gained}`, THEME.entity.pulse);
+      this.fx.floatText(x, y - u(48), `+${gained}`, THEME.entity.pulse);
     }
 
     // 命中够多才有"重量感":hitstop 只在清一大片时触发,震屏强度按命中数
@@ -314,13 +318,13 @@ export class PlayScene extends Phaser.Scene {
   }
 
   /** 第二圈冲击波环,延迟 ring2DelayMs 才出现,线宽/alpha 减半,叠加出"双环"的层次感。 */
-  private secondaryRing(x: number, y: number): void {
+  private secondaryRing(x: number, y: number, radius: number): void {
     this.time.delayedCall(PULSE.ring2DelayMs, () => {
       const ring = this.add.circle(x, y, PULSE.ring2StartRadius).setDepth(50);
       ring.setStrokeStyle(PULSE.ring2StrokeWidth, THEME.entity.pulse, PULSE.ring2StartAlpha);
       this.tweens.add({
         targets: ring,
-        radius: PULSE.radius,
+        radius,
         alpha: 0,
         duration: 380,
         ease: 'Cubic.Out',

@@ -69,8 +69,51 @@ export class GameState {
     return this._charge / PULSE.maxCharge;
   }
 
+  get pulseArmRatio(): number {
+    return Math.min(1, this._charge / PULSE.minCharge);
+  }
+
   get pulseReady(): boolean {
-    return this._charge >= PULSE.maxCharge;
+    return this._charge >= PULSE.minCharge;
+  }
+
+  get pulseRadius(): number {
+    if (this._charge <= 0) {
+      return 0;
+    }
+    if (this._charge < PULSE.minCharge) {
+      return Math.round(PULSE.radiusMin * (this._charge / PULSE.minCharge));
+    }
+    const ratio = this.pulsePowerRatio;
+    return Math.round(PULSE.radiusMin + (PULSE.radiusMax - PULSE.radiusMin) * ratio);
+  }
+
+  get pulsePowerRatio(): number {
+    if (this._charge < PULSE.minCharge) {
+      return 0;
+    }
+    return Math.max(0, Math.min(1, (this._charge - PULSE.minCharge) / (PULSE.maxCharge - PULSE.minCharge)));
+  }
+
+  get pulseRangeMultiplier(): number {
+    if (!this.pulseReady) {
+      return 0;
+    }
+    return PULSE.rangeMultiplierMin + (PULSE.rangeMultiplierMax - PULSE.rangeMultiplierMin) * this.pulsePowerRatio;
+  }
+
+  get pulseComboMultiplier(): number {
+    if (!this.pulseReady) {
+      return 0;
+    }
+    return 1 + (this._multiplier - 1) * PULSE.comboMultiplierStep;
+  }
+
+  get pulseScoreMultiplier(): number {
+    if (!this.pulseReady) {
+      return 0;
+    }
+    return this.pulseRangeMultiplier * this.pulseComboMultiplier;
   }
 
   /** 这一局是否还能复活。UI 只应该读这个,不应该直接改 reviveUsed。 */
@@ -118,10 +161,8 @@ export class GameState {
     this.lastMoteAt = this.elapsedMs;
     this._maxCombo = Math.max(this._maxCombo, this._multiplier);
 
-    // 得分随连击倍率放大,但充能故意不乘倍率 —— 这条很重要:
-    // 如果充能也跟着倍率走,后期高倍连击会让充能远超"吃点攒能量"这条
-    // 主线路本该有的节奏,冲击波会变得唾手可得,彻底失去稀缺性,
-    // 也让 GRAZE 路线相形之下毫无意义。
+    // 得分随连击倍率放大,但 pulse 范围累计故意不乘倍率。否则高倍连击会
+    // 同时放大"本次得分"和"下一次大招范围",滚雪球太快,取舍会消失。
     this._score += MOTE.scorePerMote * this._multiplier;
     this._charge = Math.min(PULSE.maxCharge, this._charge + MOTE.chargePerMote);
     this._motesCollected += 1;
@@ -133,30 +174,45 @@ export class GameState {
    * (用 Phaser.Math.Distance 之类),GameState 不引用任何 Phaser 对象,
    * 也不应该知道这次调用是怎么被触发的。
    *
-   * 经济性推算(避免 graze 路线比 mote 路线更快攒出冲击波,喧宾夺主):
-   * 难度曲线后期(90s 封顶后)hazardIntervalMs=260ms、hazardBatch=2,
-   * 危险物入场速率 ≈ 2 / 0.26s ≈ 7.7 个/秒。假设玩家能贴近其中 30%
-   * (即 ≈2.3 次/秒的 graze),每次 +3 充能 → ≈6.9 充能/秒,
-   * 充满 maxCharge(100)约需 14.5 秒才能放一次冲击波。
-   * 同一时期 mote 路线:moteIntervalMs=1000ms → 1 个/秒,每个 +12 充能
-   * → 12 充能/秒,充满约 8.3 秒。两条路线相差约 1.5~1.7 倍、同一量级,
-   * 且 graze 风险显著更高(贴着碎片走比吃安全区里的点危险得多)——
-   * 不会出现"纯走 graze 就吊打纯吃点"的失衡,数值维持 GRAZE 常量原值不调整。
+   * graze 只给 0.25 豆,价值是"冒险续连击 + 补一点范围累计",
+   * 不是替代 mote 的主要充能路线。这样玩家贴边有收益,但想稳定释放
+   * 仍然要主动吃蓝点。
    */
   grazeHazard(): void {
     this._score += GRAZE.scorePerGraze;
     this._charge = Math.min(PULSE.maxCharge, this._charge + GRAZE.chargePerGraze);
+    if (this.lastMoteAt !== null) {
+      this.lastMoteAt = this.elapsedMs;
+    }
     this._grazes += 1;
   }
 
   /** 释放冲击波。返回本次得分,调用方用它决定要不要触发 happyTime。 */
   spendPulse(hazardsCleared: number): number {
+    this.assertPulseHazardCount(hazardsCleared);
+    if (!this.pulseReady) {
+      throw new Error(`pulse 尚未就绪: 至少需要 ${PULSE.minCharge} 点范围累计`);
+    }
+    const gained = this.previewPulseScore(hazardsCleared);
     this._charge = 0;
-    const gained = hazardsCleared * PULSE.scorePerHazardCleared;
     this._score += gained;
     this._pulsesFired += 1;
     this._hazardsCleared += hazardsCleared;
     return gained;
+  }
+
+  previewPulseScore(hazardsCleared: number): number {
+    this.assertPulseHazardCount(hazardsCleared);
+    if (!this.pulseReady || hazardsCleared <= 0) {
+      return 0;
+    }
+    return Math.round(hazardsCleared * PULSE.scorePerHazardCleared * this.pulseScoreMultiplier);
+  }
+
+  private assertPulseHazardCount(hazardsCleared: number): void {
+    if (!Number.isInteger(hazardsCleared) || hazardsCleared < 0) {
+      throw new Error(`hazardsCleared 必须是非负整数: ${hazardsCleared}`);
+    }
   }
 
   tick(deltaMs: number): void {

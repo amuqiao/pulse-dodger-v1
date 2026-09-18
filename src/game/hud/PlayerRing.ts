@@ -12,7 +12,7 @@ const FRAME_MS_60 = 1000 / 60;
  * 屏幕中心的自己身上,把"还差多少充能""放出去能炸到多大范围""瞄准的
  * 目标够不够密"这三件事都摆在玩家视线本来就在的地方,才算真的被看到。
  *
- * 只画,不碰任何玩法状态 —— chargeRatio / pulseReady / inRangeCount 全部
+ * 只画,不碰任何玩法状态 —— chargeRatio / pulseReady / pulseRadius / inRangeCount 全部
  * 由调用方(PlayScene)算好传进来。
  */
 export class PlayerRing {
@@ -40,6 +40,7 @@ export class PlayerRing {
     y: number,
     chargeRatio: number,
     pulseReady: boolean,
+    pulseRadius: number,
     inRangeCount: number,
     delta: number,
     now: number,
@@ -56,19 +57,19 @@ export class PlayerRing {
     if (this.burstActive) {
       this.drawBurstRing(x, y);
     } else if (pulseReady) {
-      this.drawReadyPreview(x, y, inRangeCount, now);
+      this.drawReadyPreview(x, y, pulseRadius, inRangeCount, now);
     } else {
-      this.drawChargeArc(x, y);
+      this.drawChargeArc(x, y, pulseRadius);
     }
   }
 
   /**
-   * 刚充满的那一刻播一次:环从充能弧的半径一次性扩张到 PULSE.radius
+   * 刚充满的那一刻播一次:环从充能弧的半径一次性扩张到当前 pulseRadius
    * (Back.Out 的过冲曲线自己就带出"冲过头再定住"的手感),动画结束后
-   * 交回给 update() 里的常驻预览态(半径收敛到 restRatio × PULSE.radius)。
+   * 交回给 update() 里的常驻预览态。
    * 一次动画讲清一个机制:玩家会看到"我的攻击范围就是这么大"。
    */
-  playReadyBurst(x: number, y: number): void {
+  playReadyBurst(x: number, y: number, pulseRadius: number): void {
     const p = THEME.pulsePreview;
 
     this.scene.tweens.killTweensOf(this.burstProxy);
@@ -77,7 +78,7 @@ export class PlayerRing {
 
     this.scene.tweens.add({
       targets: this.burstProxy,
-      radius: PULSE.radius,
+      radius: pulseRadius,
       duration: p.readyExpandMs,
       ease: 'Back.Out',
       onComplete: () => {
@@ -91,7 +92,7 @@ export class PlayerRing {
   }
 
   /** 未满充能:充能弧 + 底下的整圈轨道。 */
-  private drawChargeArc(x: number, y: number): void {
+  private drawChargeArc(x: number, y: number, pulseRadius: number): void {
     const p = THEME.pulsePreview;
     const radius = PLAYER.radius + p.chargeRingGap;
 
@@ -109,25 +110,30 @@ export class PlayerRing {
     this.graphics.beginPath();
     this.graphics.arc(x, y, radius, startRad, endRad, false);
     this.graphics.strokePath();
+
+    if (pulseRadius > radius) {
+      this.graphics.lineStyle(p.ringWidth, THEME.entity.mote, 0.08 + this.displayRatio * 0.12);
+      this.graphics.strokeCircle(x, y, pulseRadius);
+    }
   }
 
   /**
    * 满充能常驻预览圈:呼吸用绝对时间驱动,`inRangeCount` 达到
    * happyTime 阈值时变金色 —— 玩家会自己学会"等圈里变金再放"。
    */
-  private drawReadyPreview(x: number, y: number, inRangeCount: number, now: number): void {
+  private drawReadyPreview(x: number, y: number, pulseRadius: number, inRangeCount: number, now: number): void {
     const p = THEME.pulsePreview;
     const happy = inRangeCount >= PULSE.happyTimeThreshold;
 
-    const breath = 1 + Math.sin(now / p.breathMs) * p.breathAmount;
-    const radius = PULSE.radius * p.restRatio * breath;
+    const breath = (1 + Math.sin(now / p.breathMs)) / 2;
+    const alpha = (happy ? p.ringAlphaHappy : p.ringAlpha) + breath * p.breathAmount;
 
     this.graphics.lineStyle(
       happy ? p.ringWidthHappy : p.ringWidth,
       happy ? THEME.entity.pulse : THEME.entity.mote,
-      happy ? p.ringAlphaHappy : p.ringAlpha,
+      alpha,
     );
-    this.graphics.strokeCircle(x, y, radius);
+    this.graphics.strokeCircle(x, y, pulseRadius);
   }
 
   private drawBurstRing(x: number, y: number): void {

@@ -35,7 +35,6 @@ const RING_ROTATE_PERIOD_MS = 6000;
 // ── 各阶段的推进阈值(非空间数值,纯数字) ──────────────────────
 const MOVE_MOVED_THRESHOLD = u(160);
 const MOVE_TIMEOUT_MS = 3000;
-const CHARGE_AUTO_MS = 1600;
 /** 首局宽限期:这段时间内 wantsHazardHold 为 true,调用方据此跳过危险物生成 */
 const HAZARD_HOLD_MS = 1800;
 
@@ -153,7 +152,7 @@ export class Tutorial {
 
   private updateCharge(ctx: TutorialContext): void {
     this.renderHint(THEME.copy.tutCharge, ctx.playerX, ctx.playerY, CHARGE_HINT_OFFSET, 0);
-    if (this.now - this.phaseStartMs > CHARGE_AUTO_MS) {
+    if (ctx.pulseReady) {
       this.enterPhase('pulse');
     }
   }

@@ -48,7 +48,8 @@ export const TOUCH_OFFSET_Y = u(-70);
 export const MOTE = {
   radius: u(8),
   scorePerMote: 10,
-  chargePerMote: 12,
+  /** 每颗能量豆提供 1 点 pulse 范围累计。3 点可释放,10 点封顶。 */
+  chargePerMote: 1,
   /** 生成后活多久没被吃掉就自动消失(ms),避免屏幕上越堆越多 */
   lifetimeMs: 8000,
   /**
@@ -79,9 +80,24 @@ export const HAZARD = {
 } as const;
 
 export const PULSE = {
-  maxCharge: 100,
-  radius: u(190),
+  /** 吃到 3 个能量豆后可以释放一个小范围 pulse。 */
+  minCharge: 3,
+  /** 最多累计 10 个能量豆的范围,继续吃只拿分和续 combo。 */
+  maxCharge: 10,
+  /** 最小可释放半径:救命用,不是高分清场。 */
+  radiusMin: u(140),
+  /** 满累计半径:高风险贪分后的大清场。 */
+  radiusMax: u(360),
   scorePerHazardCleared: 25,
+  /** 3 豆时的清场倍率。 */
+  rangeMultiplierMin: 1,
+  /** 10 豆时的清场倍率。 */
+  rangeMultiplierMax: 2.2,
+  /**
+   * pulse 只吃压缩后的 combo 奖励:普通收集仍是完整 x1..x5,
+   * 但清场如果也直接乘完整 combo,会把"攒 10 豆 + 高连击"变成唯一最优解。
+   */
+  comboMultiplierStep: 0.25,
   /** 一次清掉多少个才算"爽到",触发 platform.happyTime() */
   happyTimeThreshold: 4,
 
@@ -91,7 +107,7 @@ export const PULSE = {
   /** 每个命中缩到 0 的动画时长 */
   clearShrinkMs: 140,
   /** 第二圈光环相对第一圈的延迟,和 ring2StartRadius/ring2StrokeWidth/
-   * ring2StartAlpha 一样,是照 PULSE.radius 和清场节奏配出来的手感参数。 */
+   * ring2StartAlpha 一样,是照 pulse 最大半径和清场节奏配出来的手感参数。 */
   ring2DelayMs: 60,
   /** 第二圈光环的起始半径,和 fx.ts 内部私有的 RING_START_RADIUS 取值
    * 一致(u(5)),但这里是 PlayScene 自己画的独立对象,不依赖 fx.ts 的私有常量。 */
@@ -101,7 +117,7 @@ export const PULSE = {
   /** 第二圈起始 alpha = 第一圈(1)减半 */
   ring2StartAlpha: 0.5,
 
-  // ── 冲击波命中反馈的震屏/定格/镜头参数,数值是照 PULSE.radius 和这款
+  // ── 冲击波命中反馈的震屏/定格/镜头参数,数值是照 pulse 最大半径和这款
   // 游戏的清场节奏专门配出来的手感参数,换玩法必然要重配,不是可沿用的
   // 视觉 token(判据见文件头)。──────────────────────────────
   /** 命中数达到这个数量才触发 hitstop(太小的清场没有"重量感"可言) */
@@ -211,8 +227,8 @@ export const COMBO = {
  */
 export const GRAZE = {
   radius: u(52),
-  /** 每次 graze 加的充能。经济性推算见 GameState.grazeHazard() 的注释 */
-  chargePerGraze: 3,
+  /** 每次 graze 给 1/4 颗豆的范围累计,作为高风险加速器。 */
+  chargePerGraze: 0.25,
   /** 每次 graze 加的分数 */
   scorePerGraze: 2,
 

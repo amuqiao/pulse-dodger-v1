@@ -19,6 +19,7 @@ export class Hud {
   private readonly comboBar: Phaser.GameObjects.Graphics;
   private readonly bestText: Phaser.GameObjects.Text;
   private readonly chargeBar: Phaser.GameObjects.Graphics;
+  private readonly pulseText: Phaser.GameObjects.Text;
 
   /** 上一次画的分数,用来判定"分数变化了"从而触发 pop 动画,不是每帧都 pop。 */
   private lastScore = 0;
@@ -59,6 +60,14 @@ export class Hud {
       .setDepth(100);
 
     this.chargeBar = scene.add.graphics().setDepth(100);
+    this.pulseText = scene.add
+      .text(0, 0, '', {
+        fontSize: font.small,
+        color: THEME.text.dim,
+        align: 'right',
+      })
+      .setOrigin(1, 0)
+      .setDepth(100);
   }
 
   update(state: GameState): void {
@@ -128,13 +137,20 @@ export class Hud {
     const y = bar.top;
 
     this.chargeBar.clear();
-    this.chargeBar.fillStyle(bar.trackFill, bar.alpha);
-    this.chargeBar.fillRoundedRect(x, y, bar.width, bar.height, bar.radius);
+    const segments = PULSE.maxCharge;
+    const gap = Math.max(1, Math.round(space.xs / 4));
+    const segmentWidth = (bar.width - gap * (segments - 1)) / segments;
 
-    const ratio = Phaser.Math.Clamp(state.charge / PULSE.maxCharge, 0, 1);
-    if (ratio > 0) {
-      this.chargeBar.fillStyle(state.pulseReady ? THEME.entity.pulse : THEME.entity.mote, bar.alpha);
-      this.chargeBar.fillRoundedRect(x, y, Math.max(bar.height, bar.width * ratio), bar.height, bar.radius);
+    for (let i = 0; i < segments; i++) {
+      const segmentX = x + i * (segmentWidth + gap);
+      this.chargeBar.fillStyle(bar.trackFill, bar.alpha);
+      this.chargeBar.fillRoundedRect(segmentX, y, segmentWidth, bar.height, bar.radius);
+
+      const filled = Phaser.Math.Clamp(state.charge - i, 0, 1);
+      if (filled > 0) {
+        this.chargeBar.fillStyle(state.pulseReady ? THEME.entity.pulse : THEME.entity.mote, bar.alpha);
+        this.chargeBar.fillRoundedRect(segmentX, y, Math.max(1, segmentWidth * filled), bar.height, bar.radius);
+      }
     }
 
     if (state.pulseReady) {
@@ -151,5 +167,18 @@ export class Hud {
         bar.radius + glow,
       );
     }
+
+    if (!state.pulseReady) {
+      this.pulseText
+        .setText('PULSE')
+        .setColor(THEME.text.dim)
+        .setPosition(x + bar.width, y + bar.height + space.xs);
+      return;
+    }
+
+    this.pulseText
+      .setText('ARMED')
+      .setColor(THEME.text.warning)
+      .setPosition(x + bar.width, y + bar.height + space.xs);
   }
 }
