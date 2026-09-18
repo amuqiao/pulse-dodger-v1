@@ -38,14 +38,32 @@ npm ci
 npm run dev
 ```
 
-开发服务器默认地址是 `http://localhost:8080`。
+开发服务器默认地址是 `http://127.0.0.1:8080`。`npm run dev` 通过
+`scripts/run.sh` 受管启动，PID、端口和日志写在 `.run/`：
+
+```text
+.run/dev.pid
+.run/dev.port
+.run/dev.log
+```
+
+关闭开发服务器：
+
+```bash
+npm run dev:stop
+```
 
 ## 常用命令
 
 | 命令 | 什么时候用 | 作用 |
 | --- | --- | --- |
 | `npm ci` | 第一次拉项目、换机器、依赖变更后 | 按 `package-lock.json` 安装依赖。 |
-| `npm run dev` | 日常开发 | 启动 Vite 开发服务器。 |
+| `npm run dev` | 日常开发 | 受管启动 Vite 开发服务器，固定 `127.0.0.1:8080`，端口占用时直接失败。 |
+| `npm run dev:status` | 不确定服务是否已启动时 | 查看 `.run/dev.pid`、`.run/dev.port` 和服务状态。 |
+| `npm run dev:stop` | 停止本地游戏服务时 | 只停止 `.run/dev.pid` 记录的本项目 Vite 进程。 |
+| `npm run dev:restart` | 本地服务状态不干净时 | 先停止再启动本项目 Vite 服务。 |
+| `npm run dev:logs` | 启动失败或排查 HMR 时 | 跟随查看 `.run/dev.log`。 |
+| `npm run dev:raw` | 排查脚本本身时 | 前台直接运行 Vite，同样固定 8080 且不自动换端口。 |
 | `npm run test` | 修改规则、生成节奏或脚本后 | 运行 Node 测试。 |
 | `npm run typecheck` | 改 TypeScript 后 | 只做类型检查，不产出文件。 |
 | `npm run check:boundaries` | 修改目录依赖后 | 检查架构边界。 |

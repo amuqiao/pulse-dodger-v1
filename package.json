@@ -6,7 +6,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite --config vite/config.dev.mjs",
+    "dev": "bash scripts/run.sh up dev",
+    "dev:raw": "vite --config vite/config.dev.mjs --host 127.0.0.1 --port 8080 --strictPort",
+    "dev:status": "bash scripts/run.sh status dev",
+    "dev:stop": "bash scripts/run.sh down dev",
+    "dev:restart": "bash scripts/run.sh restart dev",
+    "dev:logs": "bash scripts/run.sh logs dev",
     "build": "npm run check:boundaries && npm run test && tsc --noEmit && vite build --config vite/config.prod.mjs",
     "preview": "vite preview --config vite/config.prod.mjs --port 8081",
     "typecheck": "tsc --noEmit",
