@@ -2,7 +2,7 @@ import type { PlatformAdapter } from './PlatformAdapter';
 import { CrazyGamesAdapter } from './adapters/crazygames';
 import { WebAdapter } from './adapters/web';
 
-export type { AdBreakHooks, PlatformAdapter, PlatformCapabilities, PlatformSettings } from './PlatformAdapter';
+export type { PlatformAdapter, PlatformCapabilities, PlatformSettings } from './PlatformAdapter';
 
 let current: PlatformAdapter | null = null;
 
@@ -21,4 +21,3 @@ export function platform(): PlatformAdapter {
   }
   return current;
 }
-

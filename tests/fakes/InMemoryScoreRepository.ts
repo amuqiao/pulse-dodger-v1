@@ -1,13 +1,26 @@
-import type { ScoreProgress, ScoreRepository } from '../../src/game/core/ScoreRepository.ts';
+import type { ScoreRepository } from '../../src/game/core/ScoreRepository.ts';
 
+/**
+ * `ScoreRepository` 的内存 fake,只给测试用。
+ * 相当于 FastAPI 测试里 `app.dependency_overrides[get_db] = fake` 的那个 fake。
+ */
 export class InMemoryScoreRepository implements ScoreRepository {
-  private progress: ScoreProgress = { bestScore: 0, runsPlayed: 0 };
+  private bestScore = 0;
+  private runsPlayed = 0;
 
-  loadProgress(): ScoreProgress {
-    return { ...this.progress };
+  loadBestScore(): number {
+    return this.bestScore;
   }
 
-  saveProgress(progress: ScoreProgress): void {
-    this.progress = { ...progress };
+  saveBestScore(value: number): void {
+    this.bestScore = value;
+  }
+
+  loadRunsPlayed(): number {
+    return this.runsPlayed;
+  }
+
+  saveRunsPlayed(value: number): void {
+    this.runsPlayed = value;
   }
 }

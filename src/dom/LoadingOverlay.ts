@@ -1,36 +1,52 @@
 export class LoadingOverlay {
-  private readonly root: HTMLElement;
-  private readonly bar: HTMLElement;
   private readonly enabled: boolean;
+  private root: HTMLElement | null = null;
+  private showTimer: number | null = null;
+  private shown = false;
 
   constructor(enabled: boolean) {
-    const root = document.getElementById('loading-overlay');
-    const bar = document.getElementById('loading-bar');
-    if (!root || !bar) {
-      throw new Error('Loading overlay DOM is missing');
-    }
-    this.root = root;
-    this.bar = bar;
     this.enabled = enabled;
   }
 
   start(): void {
     if (!this.enabled) {
-      this.finish();
       return;
     }
-    this.root.classList.remove('is-hidden');
-    this.setProgress(0);
+
+    this.root = document.getElementById('loading-overlay');
+    if (!this.root) {
+      throw new Error('Loading overlay DOM is missing');
+    }
+
+    this.showTimer = window.setTimeout(() => {
+      this.root!.hidden = false;
+      this.shown = true;
+      this.setProgress(0);
+    }, 300);
   }
 
   setProgress(ratio: number): void {
+    if (!this.shown || !this.root) {
+      return;
+    }
+
+    const bar = this.root.querySelector<HTMLElement>('.loading-bar-fill');
+    if (!bar) {
+      throw new Error('Loading overlay progress bar is missing');
+    }
+
     const clamped = Math.max(0, Math.min(1, ratio));
-    this.bar.style.width = `${Math.round(clamped * 100)}%`;
+    bar.style.width = `${Math.round(clamped * 100)}%`;
   }
 
   finish(): void {
-    this.setProgress(1);
-    window.setTimeout(() => this.root.classList.add('is-hidden'), 80);
+    if (this.showTimer !== null) {
+      window.clearTimeout(this.showTimer);
+      this.showTimer = null;
+    }
+    if (this.root) {
+      this.root.hidden = true;
+    }
+    this.shown = false;
   }
 }
-

@@ -21,9 +21,15 @@ const RULES = [
       const match = /^\s*(?:import|export)\s(.*)from\s+['"](\.[^'"]+)['"]/.exec(line);
       if (!match) return false;
       if (/^\s*type\s/.test(match[1])) return false;
-      return !/^\.\/[^/]+\.ts$/.test(match[2]) && match[2] !== '../tuning.ts';
+      return !/^\.\/[^/]+\.ts$/.test(match[2]) && match[2] !== '../tuning.ts' && match[2] !== '../viewport.ts';
     },
     why: 'Rules must be testable in Node without Phaser or browser globals.',
+  },
+  {
+    dir: 'game/effects',
+    label: 'game/effects must not import game/core',
+    check: (_rel, line) => /^\s*(import|export)\s.*from\s+['"]\.\.\/core\//.test(line),
+    why: 'Effects should render feedback without depending on domain rules.',
   },
   {
     dir: 'platform',
@@ -81,4 +87,3 @@ if (violations.length > 0) {
 }
 
 console.log('\n✓ Dependency boundaries are clean\n');
-

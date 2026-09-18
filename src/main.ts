@@ -1,6 +1,5 @@
 import { createGame } from './game/main';
 import { LoadingOverlay } from './dom/LoadingOverlay';
-import { assertScorePersistenceAvailable } from './game/composition';
 import { initPlatform } from './platform';
 
 function installBrowserInputGuards(): void {
@@ -18,7 +17,6 @@ async function bootstrap(): Promise<void> {
 
   const adapter = await initPlatform();
   console.info(`[platform] ${adapter.name}`);
-  assertScorePersistenceAvailable();
 
   const loading = new LoadingOverlay(!adapter.capabilities.platformProvidesLoadingUI);
   loading.start();
