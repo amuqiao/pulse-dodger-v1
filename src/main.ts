@@ -5,11 +5,6 @@ import { initPlatform } from './platform';
 function installBrowserInputGuards(): void {
   window.addEventListener('wheel', (event) => event.preventDefault(), { passive: false });
   window.addEventListener('contextmenu', (event) => event.preventDefault());
-  window.addEventListener('keydown', (event) => {
-    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(event.key)) {
-      event.preventDefault();
-    }
-  });
 }
 
 async function bootstrap(): Promise<void> {
