@@ -1,0 +1,4 @@
+asset,path,source,license,notes
+generated textures,src/game/scenes/BootScene.ts,self-generated,project license,Template circles generated at runtime
+generated sounds,src/game/effects/audio.ts,self-generated,project license,WebAudio oscillator tones generated at runtime
+

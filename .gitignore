@@ -1,0 +1,6 @@
+node_modules/
+dist/
+submissions/
+.DS_Store
+*.log
+

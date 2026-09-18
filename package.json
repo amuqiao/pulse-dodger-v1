@@ -1,0 +1,35 @@
+{
+  "name": "pulse-dodger-v1",
+  "version": "0.1.0",
+  "description": "Pulse Dodger v1",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --config vite/config.dev.mjs",
+    "build": "npm run check:boundaries && npm run test && tsc --noEmit && vite build --config vite/config.prod.mjs",
+    "preview": "vite preview --config vite/config.prod.mjs --port 8081",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test \"tests/**/*.test.*\"",
+    "check:boundaries": "node scripts/check-boundaries.mjs",
+    "check:size": "node scripts/build-zip.mjs --check-only",
+    "portal:upload": "node scripts/prepare-portal-upload-basic.mjs",
+    "archive:offline": "npm run build && node scripts/build-zip.mjs",
+    "package": "npm run archive:offline",
+    "portal:upload:full": "node scripts/prepare-portal-upload-full.mjs"
+  },
+  "dependencies": {
+    "phaser": "3.90.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.7",
+    "terser": "^5.39.0",
+    "typescript": "~5.7.2",
+    "vite": "^6.3.1"
+  },
+  "packageManager": "npm@11.12.1",
+  "engines": {
+    "node": ">=24.12.0",
+    "npm": ">=11 <12"
+  }
+}
