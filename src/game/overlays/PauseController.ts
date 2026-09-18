@@ -38,6 +38,7 @@ export interface PauseControllerHooks {
 export class PauseController {
   private paused = false;
   private panel: Panel | null = null;
+  private pausedTweens: Phaser.Tweens.Tween[] = [];
   private readonly pauseButton: Phaser.GameObjects.Text;
 
   constructor(
@@ -115,6 +116,7 @@ export class PauseController {
     this.scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.scene.game.events.off(Phaser.Core.Events.BLUR, onBlur);
       this.scene.game.events.off(Phaser.Core.Events.VISIBLE, onVisible);
+      this.restorePausedTweens();
       this.panel?.destroy();
       this.panel = null;
     });
@@ -128,7 +130,7 @@ export class PauseController {
 
     this.paused = true;
     this.scene.physics.pause();
-    this.scene.tweens.pauseAll();
+    this.pauseActiveTweens();
     this.scene.time.paused = true;
     this.pauseButton.setVisible(false);
     this.hooks.onPause();
@@ -171,7 +173,7 @@ export class PauseController {
     this.pauseButton.setVisible(true);
 
     this.scene.physics.resume();
-    this.scene.tweens.resumeAll();
+    this.restorePausedTweens();
     this.scene.time.paused = false;
     this.hooks.onResume();
 
@@ -181,7 +183,21 @@ export class PauseController {
   private quitToMenu(): void {
     this.paused = false;
     this.scene.time.paused = false;
-    this.scene.tweens.resumeAll();
+    this.restorePausedTweens();
     fadeToScene(this.scene, SCENES.Menu);
+  }
+
+  private pauseActiveTweens(): void {
+    this.pausedTweens = this.scene.tweens.getTweens().filter((tween) => !tween.paused);
+    for (const tween of this.pausedTweens) {
+      tween.pause();
+    }
+  }
+
+  private restorePausedTweens(): void {
+    for (const tween of this.pausedTweens) {
+      tween.resume();
+    }
+    this.pausedTweens = [];
   }
 }
