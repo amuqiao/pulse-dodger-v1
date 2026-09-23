@@ -1,3 +1,86 @@
+# PROJECT KNOWLEDGE BASE
+
+**Generated:** 2026-09-23
+
+## OVERVIEW
+
+Project: **Pulse Dodger**
+
+Stack: **TypeScript** + **Phaser 3.90.0** + **Vite 6** + **Node.js test runner**，面向 **CrazyGames HTML5 SDK v3** 的 H5 躲避游戏。项目使用 `npm@11`、`node>=24.12.0`，并启用 `engine-strict`。
+
+## STRUCTURE
+
+```text
+src/main.ts              浏览器启动入口：平台初始化、输入保护、加载遮罩
+src/dom/                 Phaser canvas 外层 DOM
+src/platform/            CrazyGames/Web 平台适配层；游戏代码不直接碰 SDK global
+src/game/main.ts         Phaser 配置和 scene 顺序
+src/game/core/           纯规则层：计分、充能、难度、广告节奏、生成预算
+src/game/scenes/         Boot/Menu/Play/Result/Settings scenes 与转场
+src/game/objects/        玩家、危险物、能量点、背景等 Phaser 对象
+src/game/hud/            HUD、combo、充能环、时间线和教学提示
+src/game/overlays/       暂停与复活流程
+src/game/effects/        音效、粒子、震屏、hitstop 等表现层
+src/game/ui/             Phaser UI 控件
+scripts/                 构建、边界检查、打包和上传目录生成脚本
+tests/                   Node test runner 单元测试
+docs/                    架构、QA、CrazyGames 提交流程和素材授权文档
+vite/                    dev/prod Vite 配置
+materials/               商店元数据、截图、封面和视频素材
+submissions/             Portal 上传产物目录
+```
+
+## COMMANDS
+
+| Action | Command |
+|--------|---------|
+| Install | `npm ci` |
+| Run dev server | `npm run dev` |
+| Dev status | `npm run dev:status` |
+| Stop dev server | `npm run dev:stop` |
+| Test | `npm run test` |
+| Typecheck | `npm run typecheck` |
+| Boundary check | `npm run check:boundaries` |
+| Build | `npm run build` |
+| Size/package check | `npm run check:size` |
+| Basic Launch upload folder | `npm run portal:upload` |
+| Full Launch ads upload folder | `npm run portal:upload:full` |
+| Offline archive | `npm run archive:offline` |
+
+`npm run build` 顺序执行：`check:boundaries -> test -> tsc --noEmit -> vite build`。
+
+## CODING STANDARDS
+
+- **Language:** TypeScript 严格模式；`tsconfig.json` 开启 `strict`、`noUnusedLocals`、`noUnusedParameters`、`isolatedModules`、`moduleResolution: bundler`。
+- **Imports:** 源码使用显式 `.ts` 相对导入风格；类型导入用 `import type`。
+- **Architecture boundaries:** 以 `scripts/check-boundaries.mjs` 为准：
+  - 只有 `src/game/**` 可 import `phaser`。
+  - `src/game/core` 只导入 core 同级模块以及 `../tuning.ts` / `../viewport.ts`。
+  - `src/game/effects` 不导入 `game/core`。
+  - `src/platform` 不导入 `game`。
+- **Platform boundary:** 游戏代码通过 `src/platform` 的 adapter 使用平台能力，不直接调用 `window.CrazyGames.SDK`。
+- **Composition:** `src/game/composition.ts` 是生产依赖组装点；scene 层使用导出的 `scores`，不要自行 new platform repository。
+- **Error handling:** 不要静默吞错或把异常数据当默认值；例如存档字段格式非法时应抛错，未存过才使用领域默认值。
+
+## WHERE TO LOOK
+
+- **Architecture:** `docs/architecture.md`、`scripts/check-boundaries.mjs`
+- **Game bootstrap:** `src/main.ts`、`src/game/main.ts`
+- **Pure game rules:** `src/game/core/`
+- **Runtime scenes:** `src/game/scenes/`
+- **Platform adapters:** `src/platform/`
+- **Tests:** `tests/*.test.ts`、`tests/*.test.mjs`
+- **CrazyGames submission:** `docs/crazygames-submit-checklist.md`、`docs/qa-checklist.md`、`scripts/prepare-portal-upload-*.mjs`
+- **Harness:** `.pi/teams/joee/`
+
+## NOTES
+
+- 本地 dev server 必须通过 `scripts/run.sh` 包装命令管理；端口固定 `127.0.0.1:8080`，不得自动漂移到 8081。
+- `.run/` 是本地运行态目录，不得提交。
+- `npm run dev:raw` 只用于排查服务管理脚本本身，不作为日常启动入口。
+- Basic Launch 使用 `VITE_ENABLE_CRAZYGAMES_ADS=false`；Full Launch / 广告验证使用 `VITE_ENABLE_CRAZYGAMES_ADS=true`。
+- 真实上传、部署、commit、push 或历史改写必须由用户明确要求。
+
 ## Git 规则
 
 - 提交必须保持单一意图，不混入无关改动；跨主题改动应拆分提交。
