@@ -1,0 +1,35 @@
+{
+  "name": "joee",
+  "architecture": "supervisor",
+  "runtime": "pi-agent-harness subagent extension",
+  "prompt": "/joee",
+  "promptDir": "./.pi/teams/joee/prompts",
+  "project": {
+    "name": "pulse-dodger-v1",
+    "stack": ["TypeScript", "Phaser 3", "Vite", "Node test runner", "CrazyGames HTML5 SDK v3"],
+    "root": "."
+  },
+  "agents": {
+    "userAgentsDir": "~/.pi/agent/agents",
+    "projectAgentsDir": "agentScope=both 时，从主会话 ctx.cwd 向上查找最近的 .pi/agents；不是 task cwd",
+    "strategy": "复用现有全局 agents 和可信项目级覆盖；joee harness 默认不复制 agent 定义"
+  },
+  "delegation": {
+    "tool": "subagent",
+    "agentScope": "both after trust preflight",
+    "modes": ["single", "parallel", "chain"],
+    "parallelLimits": {
+      "maxTasks": 8,
+      "maxConcurrency": 4,
+      "modelVisibleOutputCapPerTask": "50KB"
+    },
+    "workspacePolicy": "仅在需要跨阶段 handoff、审计追踪、后续 rerun/partial recovery 或用户明确要求时创建 _workspace/joee/<run-id>/",
+    "pattern": "主 agent 分流和计划，按领域委派 bounded subtasks，整合结果，按风险 review，运行最小必要验证"
+  },
+  "safety": {
+    "projectAgentPolicy": "使用 agentScope=both 前，基于主会话 ctx.cwd 的项目级 .pi/agents 做 trust preflight；不要依赖 headless/API 环境 UI 确认",
+    "writeCoordinationGuidance": "优先由主 agent 落地改动；只有文件范围互不重叠且 task 明确授权时，才允许 workspace-write subagent 直接编辑",
+    "reviewPolicy": "review 委派默认使用 read-only agents；发现问题后由主 agent 判断是否修当前任务相关项",
+    "verifyPolicy": "代码、测试、构建、配置和长期计划改动完成前运行最小相关验证；本项目优先 npm run test / npm run typecheck / npm run build"
+  }
+}

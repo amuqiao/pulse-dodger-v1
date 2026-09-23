@@ -44,3 +44,14 @@
 - 不要直接后台运行 Vite、Node server 或其他本地服务。
 - 不要绕过 `scripts/run.sh` 自行维护 PID、日志或端口。
 - `npm run dev:raw` 只用于排查服务管理脚本本身，不作为日常启动入口。
+
+## Harness: Joee Supervisor
+
+**目标:** 为 Pulse Dodger 的代码、测试、文档、构建和 CrazyGames 提交流程任务提供项目级 Supervisor 编排入口。
+
+**触发:** 需要多 agent / supervisor / harness 工作流时使用 `./.pi/teams/joee/prompts/joee.md`（注册后为 `/joee`）。单纯问答或小范围明确修改可直接处理。
+
+**变更历史:**
+| 日期 | 变更内容 | 对象 | 事由 |
+|------|----------|------|------|
+| 2026-09-23 | 初始配置 Joee Supervisor harness | `.pi/teams/joee/` | 用户要求构建 supervisor architecture harness |
