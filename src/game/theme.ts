@@ -16,30 +16,30 @@ export const THEME = {
   name: 'neon-dark',
 
   /** 画布与遮罩 */
-  bg: 0x080b14,
-  bgAccent: 0x121a2e,
-  overlayFill: 0x0f172a,
-  overlayAlpha: 0.94,
+  bg: 0x050812,
+  bgAccent: 0x16213f,
+  overlayFill: 0x0b1224,
+  overlayAlpha: 0.92,
   scrimFill: 0x000000,
   scrimAlpha: 0.62,
 
   /** 三种实体的颜色 */
   entity: {
-    player: 0x5eead4,
-    playerGlow: 0x14b8a6,
-    hazard: 0xf43f5e,
-    hazardGlow: 0x7f1d3a,
-    mote: 0x38bdf8,
-    moteGlow: 0x0c4a6e,
-    pulse: 0xfacc15,
+    player: 0x7dd3fc,
+    playerGlow: 0x22d3ee,
+    hazard: 0xfb4266,
+    hazardGlow: 0x8b1231,
+    mote: 0xa78bfa,
+    moteGlow: 0x2563eb,
+    pulse: 0xf8d66d,
   },
 
   /** 文字颜色,CSS 字符串形式(Phaser 文本对象要的是字符串) */
   text: {
     primary: '#e2e8f0',
     dim: '#64748b',
-    accent: '#5eead4',
-    warning: '#facc15',
+    accent: '#7dd3fc',
+    warning: '#f8d66d',
     onAccent: '#0f172a',
   },
 
@@ -96,11 +96,11 @@ export const THEME = {
   button: {
     paddingX: u(28),
     paddingY: u(14),
-    primaryBg: '#5eead4',
+    primaryBg: '#7dd3fc',
     primaryText: '#0f172a',
-    warningBg: '#facc15',
+    warningBg: '#f8d66d',
     warningText: '#0f172a',
-    ghostBg: '#1e293b',
+    ghostBg: '#1a2440',
     ghostText: '#e2e8f0',
   },
 
@@ -195,7 +195,7 @@ export const THEME = {
 
   /** 星空背景密度 */
   starfield: {
-    count: 60,
+    count: 120,
     minRadius: u(1),
     maxRadius: u(3),
     alpha: 0.55,
@@ -204,15 +204,15 @@ export const THEME = {
   /** 所有面向玩家的文案。做多语言时把这一块换成 i18n 查表即可 */
   copy: {
     gameTitle: 'PULSE DODGER',
-    tagline: 'Dodge red shards · collect blue energy · unleash a pulse',
-    controls: 'Move with mouse or touch · click or press Space to pulse · Esc to pause',
+    tagline: 'Thread the storm · harvest energy · detonate the arena',
+    controls: 'Move with mouse or touch · click / Space / PULSE to detonate · Esc to pause',
     /** 主页操作按钮文案。以前这里是"点击任意位置开始"配一段非交互的闪烁文字,
      * 全屏任意位置的 pointerdown 才是真正的触发源;现在按钮本身就是唯一的
      * 交互入口(见 MenuScene 的按钮状态机改造),文案要换成对应这个按钮的动作。 */
     startGame: 'START',
     bestScore: 'BEST',
     settings: 'SETTINGS',
-    pulseReady: 'PULSE READY - CLICK / SPACE',
+    pulseReady: 'PULSE ARMED · DETONATE',
     pauseGlyph: 'II',
     paused: 'PAUSED',
     resume: 'RESUME',
@@ -221,11 +221,12 @@ export const THEME = {
     gameOver: 'GAME OVER',
     newBest: 'NEW BEST!',
     playAgain: 'PLAY AGAIN',
-    reviveTitle: 'Watch an ad to revive',
+    reviveTitle: 'Revive this run',
     reviveButton: 'REVIVE',
+    noThanks: 'NO THANKS',
     reviveCountdown: (n: number) => `Results in ${n}s`,
     survivedFor: (s: number, best: number) => `Survived ${s}s  ·  Best ${best}`,
-    resultTip: 'Tip: a wider ring pays better, but waiting longer is the risk',
+    resultTip: 'Perfect runs come from clean dodges, greedy grazes, and patient pulses',
     loading: 'Loading',
     soundOn: 'Sound: On',
     soundOff: 'Sound: Off',
@@ -244,7 +245,7 @@ export const THEME = {
     footerHint: {
       before: 'Move with mouse or touch ·',
       spaceKey: 'SPACE',
-      middle: 'or click to pulse ·',
+      middle: 'or PULSE to detonate ·',
       escKey: 'ESC',
       after: 'pause',
     },
@@ -263,6 +264,14 @@ export const THEME = {
     recordBroken: 'Record broken!',
     overBest: (n: number) => `${n} over best`,
     gapToBest: (n: number) => `${n} to best`,
+    statsCombo: 'MAX COMBO',
+    statsGraze: 'GRAZES',
+    statsCleared: 'CLEARED',
+    touchPulseButton: 'PULSE',
+    grazeHint: 'GRAZE +2 · +¼ CHARGE',
+    phaseCalibrate: 'PHASE I · CALIBRATION',
+    phaseCrossfire: 'PHASE II · CROSS FIRE',
+    phaseOverload: 'PHASE III · OVERLOAD',
 
     /** 连击倍率标签(HUD,分数正下方) */
     comboLabel: (n: number) => `x${n}`,
@@ -270,10 +279,10 @@ export const THEME = {
     /** 首局内嵌引导文案(见 ui/Tutorial.ts) */
     tutMove: 'Move to dodge',
     tutMoveTouch: 'Drag to move',
-    tutCollect: 'Collect blue motes',
+    tutCollect: 'Collect energy crystals',
     tutCharge: 'Collect 3 motes to arm pulse',
-    tutPulseMouse: 'Click to cash out',
+    tutPulseMouse: 'Click to detonate',
     tutPulseKey: 'Press Space',
-    tutPulseTouch: 'Tap to pulse',
+    tutPulseTouch: 'Tap PULSE button',
   },
 } as const;

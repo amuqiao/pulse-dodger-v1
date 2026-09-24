@@ -4,7 +4,7 @@ body {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background: #080b14;
+  background: radial-gradient(circle at 18% 20%, #111c3f 0%, #050812 45%, #02040a 100%);
   color: #e2e8f0;
   font-family:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -22,7 +22,7 @@ canvas {
 #app {
   position: fixed;
   inset: 0;
-  background: #080b14;
+  background: radial-gradient(circle at 18% 20%, #111c3f 0%, #050812 45%, #02040a 100%);
 }
 
 #game-root {
@@ -47,8 +47,8 @@ canvas {
   place-items: center;
   justify-content: center;
   gap: 18px;
-  background: #080b14;
-  color: #64748b;
+  background: radial-gradient(circle at 50% 38%, #14204a 0%, #050812 58%, #02040a 100%);
+  color: #93a4c4;
   z-index: 20;
   font-size: 15px;
   letter-spacing: 0.08em;
@@ -59,7 +59,7 @@ canvas {
 }
 
 .loading-title {
-  color: #64748b;
+  color: #93a4c4;
   font-weight: 700;
   text-align: center;
 }
@@ -69,13 +69,13 @@ canvas {
   height: 4px;
   overflow: hidden;
   border-radius: 2px;
-  background: #1e293b;
+  background: #1a2440;
 }
 
 .loading-bar-fill {
   width: 0%;
   height: 100%;
-  background: #5eead4;
+  background: linear-gradient(90deg, #7dd3fc, #f8d66d);
   transition: width 120ms linear;
 }
 
@@ -84,7 +84,7 @@ canvas {
   left: 50%;
   bottom: env(safe-area-inset-bottom, 0px);
   transform: translateX(-50%);
-  width: 320px;
+  width: min(320px, calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)));
   height: 50px;
   z-index: 10;
   pointer-events: auto;

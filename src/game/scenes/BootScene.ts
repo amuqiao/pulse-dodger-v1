@@ -51,25 +51,82 @@ export class BootScene extends Phaser.Scene {
    * 相比每帧用 Graphics 重绘,贴图可以走批渲染,几百个物体也不掉帧。
    */
   private generateTextures(): void {
-    this.makeGlowCircle('tex-player', PLAYER.radius, THEME.entity.player, THEME.entity.playerGlow);
-    this.makeGlowCircle('tex-hazard', HAZARD.radius, THEME.entity.hazard, 0x7f1d3a);
-    this.makeGlowCircle('tex-mote', MOTE.radius, THEME.entity.mote, 0x0c4a6e);
+    this.makePlayerCore('tex-player', PLAYER.radius);
+    this.makeShard('tex-hazard', HAZARD.radius);
+    this.makeEnergyDiamond('tex-mote', MOTE.radius);
     this.makeSoftDot('tex-spark', 6, 0xffffff);
     this.makeStarfield('tex-starfield');
   }
 
-  private makeGlowCircle(key: string, radius: number, core: number, glow: number): void {
+  private makePlayerCore(key: string, radius: number): void {
     const size = radius * 4;
+    const cx = size / 2;
+    const cy = size / 2;
     const g = this.add.graphics();
 
-    g.fillStyle(glow, 0.22);
-    g.fillCircle(size / 2, size / 2, radius * 2);
-    g.fillStyle(glow, 0.45);
-    g.fillCircle(size / 2, size / 2, radius * 1.4);
-    g.fillStyle(core, 1);
-    g.fillCircle(size / 2, size / 2, radius);
-    g.fillStyle(0xffffff, 0.75);
-    g.fillCircle(size / 2 - radius * 0.28, size / 2 - radius * 0.28, radius * 0.34);
+    g.fillStyle(THEME.entity.playerGlow, 0.16);
+    g.fillCircle(cx, cy, radius * 2);
+    g.lineStyle(Math.max(2, radius * 0.12), THEME.entity.playerGlow, 0.75);
+    g.strokeCircle(cx, cy, radius * 1.34);
+    g.fillStyle(THEME.entity.player, 1);
+    g.fillCircle(cx, cy, radius);
+    g.fillStyle(0xffffff, 0.84);
+    g.fillCircle(cx - radius * 0.25, cy - radius * 0.3, radius * 0.32);
+    g.lineStyle(Math.max(1, radius * 0.08), 0xffffff, 0.28);
+    g.beginPath();
+    g.arc(cx, cy, radius * 0.72, Phaser.Math.DegToRad(190), Phaser.Math.DegToRad(330));
+    g.strokePath();
+
+    g.generateTexture(key, size, size);
+    g.destroy();
+  }
+
+  private makeShard(key: string, radius: number): void {
+    const size = radius * 4;
+    const cx = size / 2;
+    const cy = size / 2;
+    const g = this.add.graphics();
+    const points = [
+      new Phaser.Geom.Point(cx, cy - radius * 1.45),
+      new Phaser.Geom.Point(cx + radius * 1.2, cy - radius * 0.18),
+      new Phaser.Geom.Point(cx + radius * 0.45, cy + radius * 1.25),
+      new Phaser.Geom.Point(cx - radius * 0.95, cy + radius * 0.9),
+      new Phaser.Geom.Point(cx - radius * 1.25, cy - radius * 0.35),
+    ];
+
+    g.fillStyle(THEME.entity.hazardGlow, 0.2);
+    g.fillCircle(cx, cy, radius * 1.9);
+    g.fillStyle(THEME.entity.hazard, 1);
+    g.fillPoints(points, true);
+    g.lineStyle(Math.max(2, radius * 0.12), 0xffffff, 0.26);
+    g.strokePoints(points, true);
+    g.lineStyle(Math.max(1, radius * 0.08), 0xffffff, 0.45);
+    g.lineBetween(cx - radius * 0.3, cy - radius * 0.85, cx + radius * 0.55, cy + radius * 0.35);
+
+    g.generateTexture(key, size, size);
+    g.destroy();
+  }
+
+  private makeEnergyDiamond(key: string, radius: number): void {
+    const size = radius * 4;
+    const cx = size / 2;
+    const cy = size / 2;
+    const g = this.add.graphics();
+    const points = [
+      new Phaser.Geom.Point(cx, cy - radius * 1.35),
+      new Phaser.Geom.Point(cx + radius * 1.05, cy),
+      new Phaser.Geom.Point(cx, cy + radius * 1.35),
+      new Phaser.Geom.Point(cx - radius * 1.05, cy),
+    ];
+
+    g.fillStyle(THEME.entity.moteGlow, 0.22);
+    g.fillCircle(cx, cy, radius * 1.85);
+    g.fillStyle(THEME.entity.mote, 0.92);
+    g.fillPoints(points, true);
+    g.lineStyle(Math.max(2, radius * 0.1), 0xffffff, 0.44);
+    g.strokePoints(points, true);
+    g.fillStyle(0xffffff, 0.7);
+    g.fillCircle(cx - radius * 0.18, cy - radius * 0.34, radius * 0.2);
 
     g.generateTexture(key, size, size);
     g.destroy();
@@ -93,14 +150,26 @@ export class BootScene extends Phaser.Scene {
    */
   private makeStarfield(key: string): void {
     const g = this.add.graphics();
-    g.fillStyle(THEME.bgAccent, THEME.starfield.alpha);
-    for (let i = 0; i < THEME.starfield.count; i++) {
-      g.fillCircle(
-        Phaser.Math.Between(0, GAME_WIDTH),
-        Phaser.Math.Between(0, GAME_HEIGHT),
-        Phaser.Math.Between(THEME.starfield.minRadius, THEME.starfield.maxRadius),
-      );
+
+    g.fillStyle(THEME.bgAccent, 0.18);
+    g.fillCircle(GAME_WIDTH * 0.18, GAME_HEIGHT * 0.22, GAME_WIDTH * 0.22);
+    g.fillStyle(THEME.entity.moteGlow, 0.12);
+    g.fillCircle(GAME_WIDTH * 0.78, GAME_HEIGHT * 0.28, GAME_WIDTH * 0.18);
+    g.fillStyle(THEME.entity.hazardGlow, 0.1);
+    g.fillCircle(GAME_WIDTH * 0.64, GAME_HEIGHT * 0.82, GAME_WIDTH * 0.24);
+
+    g.lineStyle(1, THEME.entity.playerGlow, 0.12);
+    for (let i = 0; i < 9; i++) {
+      const y = GAME_HEIGHT * (0.12 + i * 0.095);
+      g.lineBetween(GAME_WIDTH * 0.08, y, GAME_WIDTH * 0.92, y + Math.sin(i) * GAME_HEIGHT * 0.018);
     }
+
+    g.fillStyle(0xffffff, THEME.starfield.alpha);
+    for (let i = 0; i < THEME.starfield.count; i++) {
+      const r = Phaser.Math.Between(THEME.starfield.minRadius, THEME.starfield.maxRadius);
+      g.fillCircle(Phaser.Math.Between(0, GAME_WIDTH), Phaser.Math.Between(0, GAME_HEIGHT), r);
+    }
+
     g.generateTexture(key, GAME_WIDTH, GAME_HEIGHT);
     g.destroy();
   }

@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { GAME_WIDTH } from '../viewport';
+import { GAME_WIDTH, u } from '../viewport';
 import { THEME } from '../theme';
 import { Panel, type PanelButton } from '../ui/Panel';
 import { SCENES } from '../scenes/contracts';
@@ -61,11 +61,11 @@ export class PauseController {
 
   private createPauseButton(): Phaser.GameObjects.Text {
     const button = this.scene.add
-      .text(GAME_WIDTH - THEME.space.md, THEME.space.sm, THEME.copy.pauseGlyph, {
+      .text(GAME_WIDTH - THEME.space.lg, THEME.space.md, THEME.copy.pauseGlyph, {
         fontSize: THEME.font.body,
-        color: THEME.text.dim,
-        backgroundColor: '#1e293b88',
-        padding: { x: THEME.space.sm, y: THEME.space.xs },
+        color: THEME.text.primary,
+        backgroundColor: '#1a2440cc',
+        padding: { x: u(18), y: u(12) },
       })
       .setOrigin(1, 0)
       .setDepth(100)

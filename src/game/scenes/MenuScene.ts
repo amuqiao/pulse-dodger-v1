@@ -290,32 +290,37 @@ export class MenuScene extends Phaser.Scene {
     }
   }
 
-  /** ⑥ 活背景:静止的主页看起来像坏了 —— 叠几个缓慢漂移/呼吸的装饰性实体,纯视觉,不参与任何判定 */
+  /** ⑥ 活背景:装饰实体只走外围轨道,把标题—图例—START 留成高级感中心静区。 */
   private createLiveBackground(): void {
-    const hazardCount = 5;
-    for (let i = 0; i < hazardCount; i++) {
-      const startX = Phaser.Math.Between(0, GAME_WIDTH);
-      const rowY = Phaser.Math.Between(u(60), GAME_HEIGHT - u(60));
-      const image = this.add.image(startX, rowY, 'tex-hazard').setAlpha(0.35).setScale(0.8);
+    const hazardTracks = [
+      { x: GAME_WIDTH * 0.1, y: GAME_HEIGHT * 0.18, drift: u(130), duration: 9000 },
+      { x: GAME_WIDTH * 0.9, y: GAME_HEIGHT * 0.2, drift: u(150), duration: 10200 },
+      { x: GAME_WIDTH * 0.08, y: GAME_HEIGHT * 0.74, drift: u(170), duration: 11200 },
+      { x: GAME_WIDTH * 0.92, y: GAME_HEIGHT * 0.78, drift: u(145), duration: 9800 },
+    ];
 
-      const driftDistance = u(160) + i * u(30);
-      const durationMs = 9000 + i * 1100;
+    for (const [i, track] of hazardTracks.entries()) {
+      const image = this.add.image(track.x, track.y, 'tex-hazard').setAlpha(0.28).setScale(0.74);
       this.tweens.add({
         targets: image,
-        x: { from: startX - driftDistance, to: startX + driftDistance },
-        duration: durationMs,
+        x: { from: track.x - track.drift, to: track.x + track.drift },
+        angle: { from: -18, to: 18 },
+        duration: track.duration + i * 700,
         yoyo: true,
         repeat: -1,
         ease: 'Sine.easeInOut',
       });
     }
 
-    const moteCount = 2;
-    for (let i = 0; i < moteCount; i++) {
-      const posX = GAME_WIDTH * (0.28 + i * 0.44);
-      const posY = GAME_HEIGHT * (0.18 + i * 0.08);
-      const image = this.add.image(posX, posY, 'tex-mote');
-      this.breathingMotes.push({ image, phase: i * Math.PI });
+    const motePositions = [
+      { x: GAME_WIDTH * 0.24, y: GAME_HEIGHT * 0.18 },
+      { x: GAME_WIDTH * 0.76, y: GAME_HEIGHT * 0.18 },
+      { x: GAME_WIDTH * 0.5, y: GAME_HEIGHT * 0.84 },
+    ];
+    for (let i = 0; i < motePositions.length; i++) {
+      const pos = motePositions[i]!;
+      const image = this.add.image(pos.x, pos.y, 'tex-mote').setAlpha(0.7);
+      this.breathingMotes.push({ image, phase: i * Math.PI * 0.72 });
     }
   }
 
