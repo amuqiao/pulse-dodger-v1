@@ -7,7 +7,8 @@ export type { PlatformAdapter, PlatformCapabilities, PlatformSettings } from './
 let current: PlatformAdapter | null = null;
 
 export async function initPlatform(): Promise<PlatformAdapter> {
-  const sdk = window.CrazyGames?.SDK;
+  const sdkEnabled = import.meta.env.VITE_ENABLE_CRAZYGAMES_SDK === 'true';
+  const sdk = sdkEnabled ? window.CrazyGames?.SDK : undefined;
   const adapter: PlatformAdapter = sdk ? new CrazyGamesAdapter(sdk) : new WebAdapter();
 
   await adapter.init();
