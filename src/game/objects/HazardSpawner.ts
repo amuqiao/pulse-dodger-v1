@@ -69,9 +69,7 @@ export class HazardSpawner {
   /** 生成 + 出屏回收,一处搞定。PlayScene 每帧(playing 态下)调用一次。 */
   update(now: number, d: DifficultySnapshot): void {
     if (now >= this.nextSpawnAt) {
-      for (let i = 0; i < d.hazardBatch; i++) {
-        this.spawnOne(u(d.hazardSpeed));
-      }
+      this.spawnPattern(u(d.hazardSpeed), d);
       // 生成节奏的推进逻辑(为什么是 nextAt+interval 而不是 now+interval,
       // 以及落后太多时怎么止损)见 `spawnClock.ts` 的 `advance()` 注释,
       // `MoteSpawner` 用的是同一份逻辑。
@@ -167,6 +165,21 @@ export class HazardSpawner {
     this.nextSpawnAt = this.scene.time.now + ms;
   }
 
+  /** 按当前阶段选择波型。数量仍受 difficultyAt().hazardBatch 控制,避免突然撑爆对象池。 */
+  private spawnPattern(speed: number, d: DifficultySnapshot): void {
+    if (d.hazardPattern === 'crossfire' && d.hazardBatch >= 2) {
+      this.spawnCrossfire(speed);
+      return;
+    }
+    if (d.hazardPattern === 'fan' && d.hazardBatch >= 2) {
+      this.spawnFan(speed);
+      return;
+    }
+    for (let i = 0; i < d.hazardBatch; i++) {
+      this.spawnOne(speed);
+    }
+  }
+
   /** 从屏幕外某条边生成,朝对侧偏随机角度飞过 —— 保证总有可躲的缝隙。 */
   private spawnOne(speed: number): void {
     const edge = Phaser.Math.Between(0, 3);
@@ -181,6 +194,49 @@ export class HazardSpawner {
       default: x = -margin; y = Phaser.Math.Between(0, GAME_HEIGHT); break;
     }
 
+    const targetX = GAME_WIDTH / 2 + Phaser.Math.Between(-HAZARD.scatterX, HAZARD.scatterX);
+    const targetY = GAME_HEIGHT / 2 + Phaser.Math.Between(-HAZARD.scatterY, HAZARD.scatterY);
+    this.spawnAt(x, y, targetX, targetY, speed);
+  }
+
+  /** 对穿波:两枚碎片从相对边入场,给玩家明确的“穿过缝隙”读法。 */
+  private spawnCrossfire(speed: number): void {
+    const margin = HAZARD.spawnMargin;
+    if (Phaser.Math.Between(0, 1) === 0) {
+      const y = GAME_HEIGHT / 2 + Phaser.Math.Between(-HAZARD.scatterY, HAZARD.scatterY);
+      this.spawnAt(-margin, y - u(82), GAME_WIDTH + margin, y - u(30), speed);
+      this.spawnAt(GAME_WIDTH + margin, y + u(82), -margin, y + u(30), speed);
+      return;
+    }
+
+    const x = GAME_WIDTH / 2 + Phaser.Math.Between(-HAZARD.scatterX, HAZARD.scatterX);
+    this.spawnAt(x - u(96), -margin, x - u(36), GAME_HEIGHT + margin, speed);
+    this.spawnAt(x + u(96), GAME_HEIGHT + margin, x + u(36), -margin, speed);
+  }
+
+  /** 扇形波:同边双发但目标点分叉,制造可读的缺口,而不是完全随机封路。 */
+  private spawnFan(speed: number): void {
+    const margin = HAZARD.spawnMargin;
+    const edge = Phaser.Math.Between(0, 3);
+    const spread = u(110);
+    let x = 0;
+    let y = 0;
+    let tx = GAME_WIDTH / 2;
+    let ty = GAME_HEIGHT / 2;
+
+    switch (edge) {
+      case 0: x = Phaser.Math.Between(GAME_WIDTH * 0.2, GAME_WIDTH * 0.8); y = -margin; tx = x; break;
+      case 1: x = GAME_WIDTH + margin; y = Phaser.Math.Between(GAME_HEIGHT * 0.2, GAME_HEIGHT * 0.8); ty = y; break;
+      case 2: x = Phaser.Math.Between(GAME_WIDTH * 0.2, GAME_WIDTH * 0.8); y = GAME_HEIGHT + margin; tx = x; break;
+      default: x = -margin; y = Phaser.Math.Between(GAME_HEIGHT * 0.2, GAME_HEIGHT * 0.8); ty = y; break;
+    }
+
+    const horizontal = edge === 1 || edge === 3;
+    this.spawnAt(x, y, horizontal ? tx : tx - spread, horizontal ? ty - spread : ty, speed);
+    this.spawnAt(x, y, horizontal ? tx : tx + spread, horizontal ? ty + spread : ty, speed);
+  }
+
+  private spawnAt(x: number, y: number, targetX: number, targetY: number, speed: number): void {
     const hazard = this._group.get(x, y, 'tex-hazard') as Phaser.Physics.Arcade.Image | null;
     if (!hazard) {
       // 见类注释坑 b:不兜底,立刻暴露,而不是静默不刷怪。
@@ -202,9 +258,6 @@ export class HazardSpawner {
     // 角速度 / 缩放 / 透明度,否则复用对象会带着上一轮死掉时的状态复活。
     hazard.enableBody(true, x, y, true, true);
 
-    // 朝屏幕中心附近飞,加一点随机偏移,避免全部撞向正中央
-    const targetX = GAME_WIDTH / 2 + Phaser.Math.Between(-HAZARD.scatterX, HAZARD.scatterX);
-    const targetY = GAME_HEIGHT / 2 + Phaser.Math.Between(-HAZARD.scatterY, HAZARD.scatterY);
     const angle = Phaser.Math.Angle.Between(x, y, targetX, targetY);
     hazard.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
     // 角速度是纯视觉旋转,不涉及空间距离,不需要过 u()

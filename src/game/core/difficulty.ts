@@ -2,6 +2,8 @@
  * 难度曲线。刻意做成**纯函数**:输入存活秒数,输出这一刻的生成参数。
  * 好处是可以直接单元测试,也方便用表格核对手感,不用进游戏反复试。
  */
+export type HazardPattern = 'drift' | 'crossfire' | 'fan';
+
 export interface DifficultySnapshot {
   /** 两个危险物之间的生成间隔(ms) */
   hazardIntervalMs: number;
@@ -9,6 +11,8 @@ export interface DifficultySnapshot {
   hazardSpeed: number;
   /** 每次生成几个 */
   hazardBatch: number;
+  /** 当前阶段的入场波型。只改变生成编排,不改变单个 hazard 的碰撞规则。 */
+  hazardPattern: HazardPattern;
   /** 能量点生成间隔(ms) */
   moteIntervalMs: number;
 }
@@ -25,6 +29,12 @@ export const DIFFICULTY_RAMP_SECONDS = 90;
 /** 碎片开始双发的时刻。同样被时间轴用来画刻度,所以必须是唯一真相。 */
 export const DOUBLE_SPAWN_SECONDS = 45;
 
+/** 第二阶段实际开始的时刻。必须和双发同源,否则 UI 会提前宣称 Cross Fire。 */
+export const PHASE_CROSSFIRE_SECONDS = DOUBLE_SPAWN_SECONDS;
+
+/** 第三阶段开始引入扇形压力波。 */
+export const PHASE_OVERLOAD_SECONDS = 65;
+
 export function difficultyAt(elapsedSeconds: number): DifficultySnapshot {
   // 在 DIFFICULTY_RAMP_SECONDS 内从 0 线性爬到 1,之后封顶。
   // 给新手足够的"我还行"的窗口期。
@@ -33,7 +43,13 @@ export function difficultyAt(elapsedSeconds: number): DifficultySnapshot {
   return {
     hazardIntervalMs: lerp(900, 260, t),
     hazardSpeed: lerp(150, 400, t),
-    hazardBatch: elapsedSeconds > DOUBLE_SPAWN_SECONDS ? 2 : 1,
+    hazardBatch: elapsedSeconds >= DOUBLE_SPAWN_SECONDS ? 2 : 1,
+    hazardPattern:
+      elapsedSeconds >= PHASE_OVERLOAD_SECONDS
+        ? 'fan'
+        : elapsedSeconds >= PHASE_CROSSFIRE_SECONDS
+          ? 'crossfire'
+          : 'drift',
     // 能量点保持稳定供给,否则后期没法充能,难度会陡然失控
     moteIntervalMs: lerp(1400, 1000, t),
   };

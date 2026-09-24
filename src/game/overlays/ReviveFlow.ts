@@ -82,8 +82,9 @@ export class ReviveFlow {
    * 复活询问。用共用的 Panel,不再手搓一套 —— 手搓的那版既没走 theme.copy
    * (以后做多语言会漏翻译),也没走 Panel(换皮时不会跟着变)。
    *
-   * 5 秒倒计时:点了算接受,超时算放弃。不给"拒绝"按钮是刻意的 ——
-   * 多一个按钮只会让玩家多一次决策,而超时本身就等于拒绝。
+   * 5 秒倒计时:点了 REVIVE 算接受,点 NO THANKS 或超时算放弃。
+   * 审核纯净版没有广告能力时 offer() 会直接返回 false;正式版有激励视频时,
+   * 拒绝入口必须即时可见,不能强迫玩家等倒计时。
    */
   private askRevive(): Promise<boolean> {
     return new Promise<boolean>((resolve) => {
@@ -100,6 +101,15 @@ export class ReviveFlow {
               timer.remove();
               panel.destroy();
               resolve(true);
+            },
+          },
+          {
+            label: THEME.copy.noThanks,
+            style: 'ghost',
+            onClick: () => {
+              timer.remove();
+              panel.destroy();
+              resolve(false);
             },
           },
         ],

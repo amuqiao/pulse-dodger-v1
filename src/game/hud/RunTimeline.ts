@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { GAME_WIDTH } from '../viewport';
 import { THEME } from '../theme';
-import { DIFFICULTY_RAMP_SECONDS, DOUBLE_SPAWN_SECONDS } from '../core/difficulty';
+import { DIFFICULTY_RAMP_SECONDS, PHASE_CROSSFIRE_SECONDS, PHASE_OVERLOAD_SECONDS } from '../core/difficulty';
 
 /**
  * 顶边难度进度条覆盖的总时长(秒)。
@@ -12,18 +12,8 @@ import { DIFFICULTY_RAMP_SECONDS, DOUBLE_SPAWN_SECONDS } from '../core/difficult
  */
 const RUN_DURATION_SECONDS = DIFFICULTY_RAMP_SECONDS;
 
-/**
- * 碎片开始双发的时间点(秒)。
- *
- * 直接用 difficulty.ts 导出的常量,**不要写成 `RUN_DURATION_SECONDS * 0.5`** ——
- * 那只是当前数值下的巧合(45 = 90×0.5)。一旦把双发时刻调到 40 秒,
- * 刻度还会停在 45,预告和实际脱节,而且不会有任何报错。
- */
-const MARK_AT_SECONDS = DOUBLE_SPAWN_SECONDS;
-
-/** 刻度闪烁的时间窗(秒):MARK_AT_SECONDS 前 1.5s 到 MARK_AT_SECONDS。 */
+/** 刻度闪烁的时间窗(秒):阶段切换前 1.5s 到阶段切换时刻。 */
 const BLINK_WINDOW_SECONDS = 1.5;
-const BLINK_START_SECONDS = MARK_AT_SECONDS - BLINK_WINDOW_SECONDS;
 
 /**
  * 屏幕最顶边一条通栏难度进度条。零文字,占 `THEME.timeline.height` 那么
@@ -53,7 +43,8 @@ export class RunTimeline {
       this.graphics.fillRect(0, 0, GAME_WIDTH * ratio, timeline.height);
     }
 
-    this.drawMark(elapsedSeconds, now, timeline);
+    this.drawMark(elapsedSeconds, now, timeline, PHASE_CROSSFIRE_SECONDS, THEME.entity.hazard);
+    this.drawMark(elapsedSeconds, now, timeline, PHASE_OVERLOAD_SECONDS, THEME.entity.pulse);
   }
 
   /** entity.mote → entity.hazard 的线性插值,ratio 0..1。 */
@@ -64,9 +55,16 @@ export class RunTimeline {
     return Phaser.Display.Color.GetColor(mixed.r, mixed.g, mixed.b);
   }
 
-  /** 50% 处(45s,碎片开始双发)的刻度;43.5s–45s 之间基于绝对时间闪烁。 */
-  private drawMark(elapsedSeconds: number, now: number, timeline: (typeof THEME)['timeline']): void {
-    const inBlinkWindow = elapsedSeconds >= BLINK_START_SECONDS && elapsedSeconds < MARK_AT_SECONDS;
+  /** 阶段刻度;切换前 1.5s 基于绝对时间闪烁。 */
+  private drawMark(
+    elapsedSeconds: number,
+    now: number,
+    timeline: (typeof THEME)['timeline'],
+    markAtSeconds: number,
+    color: number,
+  ): void {
+    const blinkStartSeconds = markAtSeconds - BLINK_WINDOW_SECONDS;
+    const inBlinkWindow = elapsedSeconds >= blinkStartSeconds && elapsedSeconds < markAtSeconds;
     // 闪烁本身用绝对时间(now)判定开关,窗口边界用 elapsedSeconds —— 前者
     // 保证闪烁节奏不受帧率/暂停影响,后者保证"在哪个时间窗闪"跟游戏进度走。
     const visible = !inBlinkWindow || Math.floor(now / timeline.markBlinkMs) % 2 === 0;
@@ -75,8 +73,8 @@ export class RunTimeline {
       return;
     }
 
-    const x = GAME_WIDTH * (MARK_AT_SECONDS / RUN_DURATION_SECONDS);
-    this.graphics.fillStyle(THEME.entity.hazard, 1);
+    const x = GAME_WIDTH * (markAtSeconds / RUN_DURATION_SECONDS);
+    this.graphics.fillStyle(color, 1);
     this.graphics.fillRect(x - timeline.markWidth / 2, 0, timeline.markWidth, timeline.height);
   }
 }

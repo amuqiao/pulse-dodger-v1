@@ -7,7 +7,7 @@ import { fadeInScene, fadeToScene } from './transition';
 import { PauseController } from '../overlays/PauseController';
 import { ReviveFlow } from '../overlays/ReviveFlow';
 import { Backdrop } from '../objects/Backdrop';
-import { difficultyAt } from '../core/difficulty';
+import { PHASE_CROSSFIRE_SECONDS, PHASE_OVERLOAD_SECONDS, difficultyAt } from '../core/difficulty';
 import { GameState } from '../core/GameState';
 import { scores } from '../composition';
 import { Hud } from '../hud/Hud';
@@ -17,6 +17,7 @@ import { Tutorial } from '../hud/Tutorial';
 import { platform } from '../../platform';
 import { audio } from '../effects/audio';
 import { PlayerController } from '../objects/PlayerController';
+import { Button } from '../ui/Button';
 import { HazardSpawner } from '../objects/HazardSpawner';
 import { MoteSpawner } from '../objects/MoteSpawner';
 import { Fx } from '../effects/fx';
@@ -61,8 +62,10 @@ export class PlayScene extends Phaser.Scene {
   private playerRing!: PlayerRing;
   private runTimeline!: RunTimeline;
   private tutorial: Tutorial | null = null;
+  private touchPulseButton: Button | null = null;
 
   private phase: PlayPhase = 'playing';
+  private announcedIntensityPhase = -1;
 
   /** 满充能的"从未满到满"边缘检测,只在跳变那一帧触发 playReadyBurst + 音效。 */
   private wasPulseReady = false;
@@ -80,6 +83,7 @@ export class PlayScene extends Phaser.Scene {
   /** graze 连击链:1.5s 内连续 graze 计数,超过窗口就重新从 1 计,喂给 audio.graze() 做音高上行。 */
   private grazeChain = 0;
   private lastGrazeAt = -Infinity;
+  private hasShownGrazeHint = false;
   private pauseStartedAt: number | null = null;
 
   constructor() {
@@ -97,6 +101,7 @@ export class PlayScene extends Phaser.Scene {
     this.tutorialPulsesFired = 0;
     this.grazeChain = 0;
     this.lastGrazeAt = -Infinity;
+    this.hasShownGrazeHint = false;
     this.pauseStartedAt = null;
     this.lastPlayerX = GAME_WIDTH / 2;
     this.lastPlayerY = GAME_HEIGHT / 2;
@@ -119,6 +124,9 @@ export class PlayScene extends Phaser.Scene {
     // 首局(累计局数为 0)才需要教学引导;老玩家不用再看一遍。
     const runsPlayed = scores.loadRunsPlayed();
     this.tutorial = runsPlayed === 0 ? new Tutorial(this) : null;
+    this.announcedIntensityPhase = -1;
+    this.createTouchPulseButton();
+    this.showPhaseBanner(THEME.copy.phaseCalibrate);
 
     // 开局宽限期:HazardSpawner 的 nextSpawnAt 初值是 0,不 holdFor 的话第一帧
     // 就会生成碎片,而玩家刚进场还没看清屏幕。首局给更长的宽限期,配合
@@ -138,6 +146,7 @@ export class PlayScene extends Phaser.Scene {
       onPause: () => {
         this.phase = 'paused';
         this.pauseStartedAt = performance.now();
+        this.updateTouchPulseButton();
       },
       onResume: () => {
         if (this.pauseStartedAt === null) {
@@ -147,6 +156,7 @@ export class PlayScene extends Phaser.Scene {
         this.pauseStartedAt = null;
         this.motes.extendActiveLifetimes(pausedForMs);
         this.phase = 'playing';
+        this.updateTouchPulseButton();
         // 给缓冲窗再恢复生成,避免"点继续的瞬间被一直悬在头上的碎片撞死"。
         // hazard 和 mote 必须同时推迟 —— 只推一个的话另一个的生成节奏没停。
         this.bumpSpawnBuffer(RUN.resumeBufferMs);
@@ -167,6 +177,7 @@ export class PlayScene extends Phaser.Scene {
 
   override update(_time: number, delta: number): void {
     if (this.phase !== 'playing') {
+      this.updateTouchPulseButton();
       return;
     }
 
@@ -182,6 +193,7 @@ export class PlayScene extends Phaser.Scene {
     this.lastPlayerY = y;
 
     const d = difficultyAt(this.state.elapsedSeconds);
+    this.updateIntensityPhase(this.state.elapsedSeconds);
 
     // Tutorial 首局期间可以要求暂缓危险物生成,跳过 hazard 的生成/回收更新。
     if (!this.tutorial?.wantsHazardHold) {
@@ -223,6 +235,82 @@ export class PlayScene extends Phaser.Scene {
     }
 
     this.hud.update(this.state);
+    this.updateTouchPulseButton();
+  }
+
+  private createTouchPulseButton(): void {
+    if (!this.sys.game.device.input.touch) {
+      return;
+    }
+
+    this.touchPulseButton = new Button(
+      this,
+      GAME_WIDTH - u(106),
+      GAME_HEIGHT - u(74),
+      THEME.copy.touchPulseButton,
+      () => this.onPulse(),
+      {
+        variant: 'warning',
+        fontSize: THEME.font.small,
+        fixedWidth: u(150),
+        paddingX: THEME.space.sm,
+        paddingY: THEME.space.sm,
+      },
+    );
+    this.touchPulseButton.text.setDepth(130);
+    this.touchPulseButton.text.on(
+      'pointerdown',
+      (_pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: Phaser.Types.Input.EventData) => {
+        event.stopPropagation();
+      },
+    );
+    this.touchPulseButton.setEnabled(false);
+  }
+
+  private updateTouchPulseButton(): void {
+    if (!this.touchPulseButton) {
+      return;
+    }
+    const active = this.phase === 'playing' && this.state.pulseReady;
+    this.touchPulseButton.setEnabled(active);
+    this.touchPulseButton.text.setVisible(this.phase === 'playing');
+  }
+
+  private updateIntensityPhase(elapsedSeconds: number): void {
+    const nextPhase = elapsedSeconds >= PHASE_OVERLOAD_SECONDS ? 2 : elapsedSeconds >= PHASE_CROSSFIRE_SECONDS ? 1 : 0;
+    if (nextPhase === this.announcedIntensityPhase) {
+      return;
+    }
+    this.announcedIntensityPhase = nextPhase;
+    if (nextPhase === 1) {
+      this.showPhaseBanner(THEME.copy.phaseCrossfire);
+    } else if (nextPhase === 2) {
+      this.showPhaseBanner(THEME.copy.phaseOverload);
+    }
+  }
+
+  private showPhaseBanner(label: string): void {
+    const text = this.add
+      .text(GAME_WIDTH / 2, GAME_HEIGHT * 0.18, label, {
+        fontSize: THEME.font.body,
+        color: THEME.text.warning,
+        fontStyle: 'bold',
+        backgroundColor: THEME.button.ghostBg,
+        padding: { x: THEME.space.md, y: THEME.space.xs },
+      })
+      .setOrigin(0.5)
+      .setDepth(140)
+      .setAlpha(0);
+
+    this.tweens.add({ targets: text, alpha: 1, y: text.y - u(10), duration: 260, ease: 'Cubic.Out' });
+    this.tweens.add({
+      targets: text,
+      alpha: 0,
+      delay: 1150,
+      duration: 360,
+      ease: 'Cubic.In',
+      onComplete: () => text.destroy(),
+    });
   }
 
   /** hazard/mote 的下一次生成时间统一推迟同一个缓冲窗,不再各写各的裸数字。 */
@@ -255,6 +343,10 @@ export class PlayScene extends Phaser.Scene {
       audio.graze(this.grazeChain);
       this.grazeArc(h, x, y);
       this.grazeChargeFleck(h.x, h.y, x, y);
+      if (!this.hasShownGrazeHint) {
+        this.hasShownGrazeHint = true;
+        this.fx.floatText(x, y - u(62), THEME.copy.grazeHint, THEME.entity.player);
+      }
     }
   }
 
@@ -471,6 +563,7 @@ export class PlayScene extends Phaser.Scene {
    */
   private handleDeath(killer: Phaser.Physics.Arcade.Image): void {
     this.phase = 'resolving';
+    this.updateTouchPulseButton();
     this.state.resetCombo();
     platform().gameplayStop();
 
@@ -625,6 +718,7 @@ export class PlayScene extends Phaser.Scene {
 
     this.bumpSpawnBuffer(RUN.reviveBufferMs);
     this.phase = 'playing';
+    this.updateTouchPulseButton();
 
     platform().gameplayStart();
   }

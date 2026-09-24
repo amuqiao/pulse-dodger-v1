@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert';
 import test from 'node:test';
-import { difficultyAt } from '../src/game/core/difficulty.ts';
+import { PHASE_CROSSFIRE_SECONDS, PHASE_OVERLOAD_SECONDS, difficultyAt } from '../src/game/core/difficulty.ts';
 
 // 难度曲线是纯函数,不依赖 Phaser 和浏览器,所以可以直接在 node 里断言。
 // 这类"规则层"的测试是游戏里最值得写的:手感调坏了会立刻被抓出来。
@@ -31,8 +31,15 @@ test('难度单调递增:间隔越来越短,速度越来越快', () => {
 });
 
 test('45 秒后开始双发', () => {
-  assert.equal(difficultyAt(44).hazardBatch, 1);
-  assert.equal(difficultyAt(46).hazardBatch, 2);
+  assert.equal(difficultyAt(PHASE_CROSSFIRE_SECONDS - 1).hazardBatch, 1);
+  assert.equal(difficultyAt(PHASE_CROSSFIRE_SECONDS).hazardBatch, 2);
+  assert.equal(difficultyAt(PHASE_CROSSFIRE_SECONDS + 1).hazardBatch, 2);
+});
+
+test('波型阶段和实际双发时刻对齐,不提前宣称 Cross Fire', () => {
+  assert.equal(difficultyAt(PHASE_CROSSFIRE_SECONDS - 1).hazardPattern, 'drift');
+  assert.equal(difficultyAt(PHASE_CROSSFIRE_SECONDS).hazardPattern, 'crossfire');
+  assert.equal(difficultyAt(PHASE_OVERLOAD_SECONDS).hazardPattern, 'fan');
 });
 
 test('能量点供给全程稳定,否则后期无法充能', () => {

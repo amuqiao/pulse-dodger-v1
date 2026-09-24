@@ -59,6 +59,7 @@ export class Button {
   /** tween 的目标不能直接是 GameObject 的 scale 属性(会和呼吸缩放互相覆盖),
    * 用一个中间代理对象承接 tween,onUpdate 里再和呼吸缩放相乘后写回 GameObject。 */
   private readonly scaleProxy = { value: 1 };
+  private enabled = true;
 
   constructor(
     scene: Phaser.Scene,
@@ -92,7 +93,7 @@ export class Button {
       fontSize: options.fontSize ?? THEME.font.body,
       color: textColorFor(this.variant),
       backgroundColor: this.baseBg,
-      padding: { x: options.paddingX ?? THEME.button.paddingX, y: options.paddingY ?? THEME.space.xs },
+      padding: { x: options.paddingX ?? THEME.button.paddingX, y: options.paddingY ?? THEME.button.paddingY },
       align: 'center',
     };
     if (options.fixedWidth !== undefined) {
@@ -123,6 +124,23 @@ export class Button {
     this.text.setText(label);
   }
 
+  setEnabled(enabled: boolean): void {
+    if (this.enabled === enabled) {
+      return;
+    }
+    this.enabled = enabled;
+    if (!enabled) {
+      this.scene.tweens.killTweensOf(this.scaleProxy);
+      this.stateScale = 1;
+      this.scaleProxy.value = 1;
+      this.text.setStyle({ backgroundColor: this.baseBg });
+      this.text.setAlpha(THEME.buttonState.disabledAlpha);
+      this.applyScale();
+      return;
+    }
+    this.text.setAlpha(1);
+  }
+
   destroy(): void {
     this.scene.tweens.killTweensOf(this.scaleProxy);
     this.text.destroy();
@@ -132,7 +150,7 @@ export class Button {
     this.text.setInteractive({ useHandCursor: true });
 
     this.text.on('pointerover', (pointer: Phaser.Input.Pointer) => {
-      if (pointer.wasTouch) {
+      if (!this.enabled || pointer.wasTouch) {
         return;
       }
       this.setHover(true);
@@ -140,10 +158,16 @@ export class Button {
     });
 
     this.text.on('pointerout', () => {
+      if (!this.enabled) {
+        return;
+      }
       this.setHover(false);
     });
 
     this.text.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      if (!this.enabled) {
+        return;
+      }
       this.tweenScaleTo(THEME.buttonState.pressScale, THEME.buttonState.pressMs);
       // 触屏没有 hover 态,按下这一下就是它唯一的"被摸到了"反馈
       if (pointer.wasTouch) {
@@ -152,6 +176,9 @@ export class Button {
     });
 
     this.text.on('pointerup', (pointer: Phaser.Input.Pointer) => {
+      if (!this.enabled) {
+        return;
+      }
       // 鼠标松开时通常还悬停在按钮上,回 hover 态;触屏松开等于手指离开,直接回 idle
       const backToHover = !pointer.wasTouch;
       this.tweenScaleTo(backToHover ? THEME.buttonState.hoverScale : 1, THEME.buttonState.hoverMs);

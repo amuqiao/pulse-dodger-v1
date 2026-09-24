@@ -8,6 +8,7 @@ import { audio } from '../effects/audio';
 import { Button } from '../ui/Button';
 import { SCENES, type ResultData } from './contracts';
 import { fadeInScene, fadeToScene } from './transition';
+import { Backdrop } from '../objects/Backdrop';
 
 /** 分数滚动时长(毫秒)。全游戏最便宜的一次多巴胺,别省。 */
 const SCORE_COUNT_MS = 600;
@@ -22,6 +23,7 @@ const NEAR_BEST_RATIO = 0.15;
 
 export class ResultScene extends Phaser.Scene {
   private result!: ResultData;
+  private restartInFlight = false;
 
   constructor() {
     super(SCENES.Result);
@@ -34,6 +36,8 @@ export class ResultScene extends Phaser.Scene {
   create(): void {
     fadeInScene(this);
     this.cameras.main.setBackgroundColor(THEME.bg);
+    new Backdrop(this);
+    this.restartInFlight = false;
 
     if (this.result.isNewBest) {
       audio.newBest();
@@ -53,6 +57,7 @@ export class ResultScene extends Phaser.Scene {
     this.createScoreCountUp(cx, y(THEME.anchor.lead));
     this.createSurvivedLine(cx, y(THEME.anchor.meta));
     this.createRecordBar(cx, y(THEME.anchor.meta) + THEME.space.lg);
+    this.createPerformanceStats(cx, y(0.62));
     this.createActionButtons(cx, y);
 
     this.add
@@ -198,11 +203,40 @@ export class ResultScene extends Phaser.Scene {
     });
   }
 
+  private createPerformanceStats(cx: number, rowY: number): void {
+    const stats = [
+      { label: THEME.copy.statsCombo, value: `x${this.result.maxCombo}`, color: THEME.entity.pulse },
+      { label: THEME.copy.statsGraze, value: String(this.result.grazes), color: THEME.entity.player },
+      { label: THEME.copy.statsCleared, value: String(this.result.hazardsCleared), color: THEME.entity.hazard },
+    ];
+    const cardWidth = u(150);
+    const cardHeight = u(76);
+    const gap = THEME.space.sm;
+    const totalWidth = stats.length * cardWidth + (stats.length - 1) * gap;
+    let x = cx - totalWidth / 2 + cardWidth / 2;
+
+    for (const stat of stats) {
+      const card = this.add.graphics().setDepth(-1);
+      card.fillStyle(THEME.overlayFill, 0.58);
+      card.fillRoundedRect(x - cardWidth / 2, rowY - cardHeight / 2, cardWidth, cardHeight, THEME.panel.cornerRadius);
+      card.lineStyle(1, stat.color, 0.38);
+      card.strokeRoundedRect(x - cardWidth / 2, rowY - cardHeight / 2, cardWidth, cardHeight, THEME.panel.cornerRadius);
+
+      this.add
+        .text(x, rowY - u(15), stat.label, { fontSize: THEME.font.small, color: THEME.text.dim })
+        .setOrigin(0.5);
+      this.add
+        .text(x, rowY + u(16), stat.value, { fontSize: THEME.font.body, color: colorString(stat.color), fontStyle: 'bold' })
+        .setOrigin(0.5);
+      x += cardWidth + gap;
+    }
+  }
+
   private createActionButtons(cx: number, y: (ratio: number) => number): void {
     new Button(
       this,
       cx,
-      y(THEME.anchor.action),
+      y(0.76),
       THEME.copy.playAgain,
       () => void this.restart(),
       { variant: 'primary', fontSize: THEME.font.button },
@@ -212,7 +246,7 @@ export class ResultScene extends Phaser.Scene {
     new Button(
       this,
       cx,
-      y(THEME.anchor.subAction),
+      y(0.86),
       THEME.copy.quitToMenu,
       () => {
         platform().clearBanners();
@@ -227,6 +261,10 @@ export class ResultScene extends Phaser.Scene {
    * 新玩家第一局就吃广告是最伤留存的做法,别这么干。
    */
   private async restart(): Promise<void> {
+    if (this.restartInFlight) {
+      return;
+    }
+    this.restartInFlight = true;
     const shouldShowAd = shouldShowInterstitial(this.result.runsPlayed);
 
     platform().clearBanners();
@@ -248,4 +286,9 @@ export class ResultScene extends Phaser.Scene {
 
     fadeToScene(this, SCENES.Play);
   }
+}
+
+function colorString(color: number): string {
+  const c = Phaser.Display.Color.ValueToColor(color);
+  return Phaser.Display.Color.RGBToString(c.red, c.green, c.blue, 255, '#');
 }
