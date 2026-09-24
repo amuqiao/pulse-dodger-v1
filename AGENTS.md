@@ -95,6 +95,7 @@ submissions/             Portal 上传产物目录
 ### 核心原则
 
 - 本项目本地服务必须通过 `scripts/run.sh` 统一管理，避免重复启动、端口漂移和遗留进程。
+- Agent 需要启动、停止、重启、查看状态或查看日志时，优先使用 `npm run dev` / `npm run dev:stop` / `npm run dev:restart` / `npm run dev:status` / `npm run dev:logs`；需要直接调用脚本时只使用 `./scripts/run.sh ...`。
 - 新增本地服务时，必须同步更新 `scripts/run.sh`、README 和本节命令表。
 - 任务结束前必须确认无关 dev server 已关闭；需要保留服务时必须明确告知用户服务地址、PID 和关闭命令。
 - `AGENTS.md` 只记录 agent 必须遵守的操作纪律；脚本实现细节、排障说明和完整使用说明放在 README 或 `scripts/` 内。
